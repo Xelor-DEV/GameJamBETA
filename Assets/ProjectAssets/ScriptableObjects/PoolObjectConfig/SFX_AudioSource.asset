@@ -1,0 +1,15 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c89447c0357a17e4fb0937295620b84b, type: 3}
+  m_Name: SFX_AudioSource
+  m_EditorClassIdentifier: 
+  prefab: {fileID: 689960638526653643, guid: 5ca7ef4d3d246004d92d15a335223025, type: 3}
