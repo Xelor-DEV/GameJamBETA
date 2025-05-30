@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 5211424581787412800}
   - component: {fileID: 2316777789789968683}
   - component: {fileID: 6313749456544409286}
+  - component: {fileID: -4374448891384128693}
   m_Layer: 5
   m_Name: MainMenuOption
   m_TagString: Untagged
@@ -139,6 +140,23 @@ MonoBehaviour:
     callback:
       m_PersistentCalls:
         m_Calls: []
+--- !u!114 &-4374448891384128693
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4107443667955997237}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 48282766bd89f5047a53b148d308ba79, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  button: {fileID: 2316777789789968683}
+  eventTrigger: {fileID: 6313749456544409286}
+  OnHighlightedClick:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!1 &5580355824510923877
 GameObject:
   m_ObjectHideFlags: 0

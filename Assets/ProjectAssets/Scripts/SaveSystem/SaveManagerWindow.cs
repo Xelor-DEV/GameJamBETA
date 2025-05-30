@@ -32,6 +32,13 @@ public class SaveSystemEditorWindow : EditorWindow
         TryLoadFiles();
     }
 
+    private void OnDisable()
+    {
+        showOverwriteWarning = false;
+        statusMessage = "";
+        statusType = MessageType.None;
+    }
+
     private void InitializeData()
     {
         audioData = new AudioConfigData();
