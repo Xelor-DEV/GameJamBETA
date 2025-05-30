@@ -9,9 +9,6 @@ public class AudioManager : MonoBehaviour
 {
     public static AudioManager Instance { get; private set; }
 
-    [BoxGroup("Audio Mixer Settings")]
-    [SerializeField, Required] private AudioMixer audioMixer;
-
     [BoxGroup("Audio Sources")]
     [SerializeField, Required] private AudioSource musicAudioSource;
 
@@ -94,25 +91,6 @@ public class AudioManager : MonoBehaviour
         }
     }
 
-    // Configuracion de volumenes
-    public void SetVolumeOfMusic(float newVolume)
-    {
-        audioMixer.SetFloat("MusicVolume", Mathf.Log10(newVolume) * 20f);
-        audioConfig.MusicVolume = newVolume;
-    }
-
-    public void SetVolumeOfSfx(float newVolume)
-    {
-        audioMixer.SetFloat("SFXVolume", Mathf.Log10(newVolume) * 20f);
-        audioConfig.SfxVolume = newVolume;
-    }
-
-    public void SetVolumeOfMaster(float newVolume)
-    {
-        audioMixer.SetFloat("MasterVolume", Mathf.Log10(newVolume) * 20f);
-        audioConfig.MasterVolume = newVolume;
-    }
-
     // Reproducir musica sin transicion
     public void PlayMusic(int index)
     {
@@ -140,13 +118,13 @@ public class AudioManager : MonoBehaviour
 
         // Realizar el fade out
         float currentVolume;
-        audioMixer.GetFloat("MusicVolume", out currentVolume);
+        audioConfig.AudioMixer.GetFloat("MusicVolume", out currentVolume);
         float startVolume = Mathf.Pow(10f, currentVolume / 20f); // Convertir dB a valor lineal
 
         for (float t = 0; t < fadeDuration; t += Time.deltaTime)
         {
             float normalizedTime = t / fadeDuration;
-            audioMixer.SetFloat("MusicVolume", Mathf.Log10(Mathf.Lerp(startVolume, 0.001f, normalizedTime)) * 20f);
+            audioConfig.AudioMixer.SetFloat("MusicVolume", Mathf.Log10(Mathf.Lerp(startVolume, 0.001f, normalizedTime)) * 20f);
             yield return null;
         }
 
@@ -159,7 +137,7 @@ public class AudioManager : MonoBehaviour
         for (float t = 0; t < fadeDuration; t += Time.deltaTime)
         {
             float normalizedTime = t / fadeDuration;
-            audioMixer.SetFloat("MusicVolume", Mathf.Log10(Mathf.Lerp(0.001f, startVolume, normalizedTime)) * 20f);
+            audioConfig.AudioMixer.SetFloat("MusicVolume", Mathf.Log10(Mathf.Lerp(0.001f, startVolume, normalizedTime)) * 20f);
             yield return null;
         }
 
@@ -240,7 +218,7 @@ public class AudioManager : MonoBehaviour
         {
             musicAudioSource.Play();
             musicAudioSource.time = prePauseMusicTime;
-            SetVolumeOfMusic(prePauseMusicVolume);
+            audioConfig.MusicVolume = prePauseMusicVolume;
         }
 
         // Despausar SFX si estaban pausados
@@ -275,7 +253,7 @@ public class AudioManager : MonoBehaviour
         {
             musicAudioSource.Play();
             musicAudioSource.time = prePauseMusicTime;
-            SetVolumeOfMusic(prePauseMusicVolume);
+            audioConfig.MusicVolume = prePauseMusicVolume;
         }
     }
 
@@ -324,7 +302,7 @@ public class AudioManager : MonoBehaviour
         for (float t = 0; t < fadeDuration; t += Time.deltaTime)
         {
             float normalizedTime = t / fadeDuration;
-            SetVolumeOfMusic(Mathf.Lerp(currentVolume, 0.001f, normalizedTime));
+            audioConfig.SetVolumeOfMusic(Mathf.Lerp(currentVolume, 0.001f, normalizedTime));
             yield return null;
         }
 
@@ -341,22 +319,22 @@ public class AudioManager : MonoBehaviour
 
         // Fade in
         float startVolume = 0.001f;
-        SetVolumeOfMusic(startVolume);
+        audioConfig.MusicVolume = startVolume;
 
         for (float t = 0; t < fadeDuration; t += Time.deltaTime)
         {
             float normalizedTime = t / fadeDuration;
-            SetVolumeOfMusic(Mathf.Lerp(startVolume, prePauseMusicVolume, normalizedTime));
+            audioConfig.SetVolumeOfMusic(Mathf.Lerp(startVolume, prePauseMusicVolume, normalizedTime));
             yield return null;
         }
 
-        SetVolumeOfMusic(prePauseMusicVolume);
+        audioConfig.MusicVolume = prePauseMusicTime;
     }
 
     // Obtener volumen de música en escala lineal
     private float GetMusicVolumeLinear()
     {
-        audioMixer.GetFloat("MusicVolume", out float dbVolume);
+        audioConfig.AudioMixer.GetFloat("MusicVolume", out float dbVolume);
         return Mathf.Pow(10f, dbVolume / 20f);
     }
 }

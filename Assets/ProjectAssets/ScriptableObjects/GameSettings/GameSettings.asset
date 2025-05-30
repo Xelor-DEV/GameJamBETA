@@ -9,10 +9,11 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9cdd49a492564144a99a790592cf6c9d, type: 3}
-  m_Name: AudioConfig
+  m_Script: {fileID: 11500000, guid: 3bcb233fcd18f9e4fa0d914972de40cd, type: 3}
+  m_Name: GameSettings
   m_EditorClassIdentifier: 
-  audioMixer: {fileID: 24100000, guid: 62ff3c2711f932640893366a9b7acba1, type: 2}
-  musicVolume: 0.5
-  sfxVolume: 0.5
-  masterVolume: 0.5
+  skipIntroCutscene: 0
+  fullscreen: 1
+  resolutionWidth: 1920
+  resolutionHeight: 1080
+  refreshRate: 60
