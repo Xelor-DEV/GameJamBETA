@@ -1,22 +1,21 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using System.Collections.Generic;
 
-public class PlayerController : MonoBehaviour
+public class PlayerController : BasePlayerController
 {
-    [Header("Configuración de Plataforma")]
     [SerializeField] private float fuerzaMovimiento = 10f;
-    // No necesita referencia al personaje para el emparentamiento, el personaje se maneja a sí mismo.
+    [SerializeField] private PlayerInput playerInputPlataforma;
+    [SerializeField] private PlayerInput playerInputPersonaje;
 
-    private Rigidbody rb;
     private Vector2 moveInputPlataforma;
+    [SerializeField] private List<Rigidbody> bloquesSobrePlataforma = new List<Rigidbody>();
 
-    void Awake()
+    protected override void Awake()
     {
-        rb = GetComponent<Rigidbody>();
-        if (rb == null)
-        {
-            Debug.LogError("PlayerController necesita un Rigidbody en el mismo GameObject.", this);
-        }
+        base.Awake();
+        if (playerInputPlataforma == null)
+            playerInputPlataforma = GetComponent<PlayerInput>();
         GameEventsManager.OnRequestControlPlataforma += HandleRequestControlPlataforma;
     }
 
@@ -27,87 +26,127 @@ public class PlayerController : MonoBehaviour
 
     void OnEnable()
     {
-        Debug.Log("PlayerController: Script HABILITADO (OnEnable). Liberando plataforma y bloques.");
-        LiberarPlataformaYBloques();
-        // El personaje se emparentará a la plataforma a través de su propio script
-        // cuando ceda el control.
+        // Elimina la llamada masiva para evitar lag al iniciar
+        // if (rb != null && rb.isKinematic)
+        //     LiberarPlataformaYBloques();
     }
 
     void OnDisable()
     {
-        Debug.Log("PlayerController: Script DESHABILITADO (OnDisable).");
         moveInputPlataforma = Vector2.zero;
-        // FijarPlataformaYBloques() se llama antes de deshabilitar en OnChangeControlPlataforma
     }
 
     private void HandleRequestControlPlataforma()
     {
-        Debug.Log("PlayerController: Recibida solicitud para tomar control de plataforma.");
-        this.enabled = true;
+        // Solo aquí se libera la plataforma y los bloques
+        LiberarPlataformaYBloques();
+        if (playerInputPlataforma != null) playerInputPlataforma.enabled = true;
+        if (playerInputPersonaje != null) playerInputPersonaje.enabled = false;
     }
 
     public void OnMovePlataforma(InputAction.CallbackContext context)
     {
-        if (this.enabled)
-        {
+        if (playerInputPlataforma != null && playerInputPlataforma.enabled)
             moveInputPlataforma = context.ReadValue<Vector2>();
-        }
+        else
+            moveInputPlataforma = Vector2.zero;
     }
 
     public void OnChangeControlPlataforma(InputAction.CallbackContext context)
     {
-        if (context.performed && this.enabled)
+        if (context.performed && playerInputPlataforma != null && playerInputPlataforma.enabled)
         {
-            Debug.Log("PlayerController: Tecla/Botón de cambio presionado. Solicitando control de Personaje.");
-            FijarPlataformaYBloques(); // Fija la plataforma antes de ceder control
-            GameEventsManager.RequestControlPersonaje(); // El personaje se desparentará a sí mismo
-            this.enabled = false;
+            FijarPlataformaYBloques();
+            if (playerInputPlataforma != null) playerInputPlataforma.enabled = false;
+            if (playerInputPersonaje != null) playerInputPersonaje.enabled = true;
+            GameEventsManager.RequestControlPersonaje();
         }
     }
 
     void FixedUpdate()
     {
-        if (rb == null || !this.enabled) return;
-
-        Vector3 direccionInput = new Vector3(moveInputPlataforma.x, 0, moveInputPlataforma.y);
-        rb.AddForce(direccionInput.normalized * fuerzaMovimiento, ForceMode.Force);
+        if (rb == null || playerInputPlataforma == null || !playerInputPlataforma.enabled)
+            return;
+        if (moveInputPlataforma != Vector2.zero && !rb.isKinematic)
+        {
+            Vector3 direccionInput = new Vector3(moveInputPlataforma.x, 0, moveInputPlataforma.y);
+            rb.AddForce(direccionInput.normalized * fuerzaMovimiento, ForceMode.Force);
+        }
     }
 
     void FijarPlataformaYBloques()
     {
         if (rb != null)
         {
-            rb.isKinematic = true;
-            rb.linearVelocity = Vector3.zero; // Usar velocity en lugar de linearVelocity para mayor compatibilidad
+            rb.linearVelocity = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
+            rb.isKinematic = true;
         }
-        Rigidbody[] todosLosRigidbodies = FindObjectsOfType<Rigidbody>();
-        foreach (Rigidbody bloqueRb in todosLosRigidbodies)
+        foreach (Rigidbody bloqueRb in bloquesSobrePlataforma)
         {
-            if (bloqueRb.gameObject.CompareTag("Bloque") && bloqueRb != rb)
+            if (bloqueRb != null)
             {
-                bloqueRb.isKinematic = true;
                 bloqueRb.linearVelocity = Vector3.zero;
                 bloqueRb.angularVelocity = Vector3.zero;
+                bloqueRb.isKinematic = true;
             }
         }
-        Debug.Log("Plataforma y bloques FIJADOS.");
     }
 
     void LiberarPlataformaYBloques()
     {
         if (rb != null)
-        {
             rb.isKinematic = false;
-        }
-        Rigidbody[] todosLosRigidbodies = FindObjectsOfType<Rigidbody>();
-        foreach (Rigidbody bloqueRb in todosLosRigidbodies)
+        foreach (Rigidbody bloqueRb in bloquesSobrePlataforma)
         {
-            if (bloqueRb.gameObject.CompareTag("Bloque") && bloqueRb != rb)
+            if (bloqueRb != null)
             {
                 bloqueRb.isKinematic = false;
             }
         }
-        Debug.Log("Plataforma y bloques LIBERADOS.");
+    }
+
+    void OnTriggerEnter(Collider other)
+    {
+        if (other.CompareTag("Bloque"))
+        {
+            Rigidbody bloqueRb = other.GetComponent<Rigidbody>();
+            if (bloqueRb == null) return;
+            if (!bloquesSobrePlataforma.Contains(bloqueRb))
+            {
+                bloquesSobrePlataforma.Add(bloqueRb);
+                if (rb != null && rb.isKinematic)
+                {
+                    bloqueRb.linearVelocity = Vector3.zero;
+                    bloqueRb.angularVelocity = Vector3.zero;
+                    bloqueRb.isKinematic = true;
+                }
+            }
+        }
+    }
+
+    void OnTriggerExit(Collider other)
+    {
+        if (other.CompareTag("Bloque"))
+        {
+            Rigidbody bloqueRb = other.GetComponent<Rigidbody>();
+            if (bloqueRb == null) return;
+            if (bloquesSobrePlataforma.Contains(bloqueRb))
+            {
+                bloquesSobrePlataforma.Remove(bloqueRb);
+                bloqueRb.isKinematic = false;
+            }
+        }
+    }
+
+    public bool EstaBloqueSobrePlataforma(Rigidbody bloqueConsultadoRb)
+    {
+        if (bloqueConsultadoRb == null) return false;
+        return bloquesSobrePlataforma.Contains(bloqueConsultadoRb);
+    }
+
+    public List<Rigidbody> GetBloquesSobrePlataforma()
+    {
+        return bloquesSobrePlataforma;
     }
 }
