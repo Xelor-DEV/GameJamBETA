@@ -71,7 +71,7 @@ public class MovementBloque : MonoBehaviour
         Vector2 mousePosition = Mouse.current.position.ReadValue();
         Ray ray = mainCamera.ScreenPointToRay(mousePosition);
         RaycastHit hitInfo;
-        // Cambia esto: el raycast debe detectar la superficie sobre la que quieres mover el bloque (por ejemplo, el suelo de la plataforma)
+        // El raycast debe detectar la superficie sobre la que quieres mover el bloque (por ejemplo, el suelo)
         if (Physics.Raycast(ray, out hitInfo, maxDragRaycastDistance, draggableSurfaceLayerMask))
         {
             Vector3 targetPosition = hitInfo.point + dragOffset;
@@ -79,14 +79,9 @@ public class MovementBloque : MonoBehaviour
         }
         else
         {
-            // Si no colisiona con la superficie, mueve el bloque a una posición en el plano horizontal a la distancia del bloque
-            Plane plane = new Plane(Vector3.up, transform.position.y);
-            float distance;
-            if (plane.Raycast(ray, out distance))
-            {
-                Vector3 targetPosition = ray.GetPoint(distance) + dragOffset;
-                rb.MovePosition(targetPosition);
-            }
+            // Si no colisiona con la superficie, NO sueltes el bloque, simplemente no lo muevas
+            // (No llames a EndDrag ni cambies estado aquí)
+            // Así el bloque solo se mueve si el mouse apunta a una superficie válida
         }
     }
 

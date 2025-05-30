@@ -24,6 +24,9 @@ public class ControladorPersonajeIndependiente : BasePlayerController
 
     private int bloqueSeleccionadoIndex = 0;
 
+    private HashSet<Rigidbody> bloquesEnSuelo = new HashSet<Rigidbody>();
+    private HashSet<Rigidbody> bloquesFueraDePlataforma = new HashSet<Rigidbody>();
+
     protected override void Awake()
     {
         base.Awake();
@@ -109,25 +112,36 @@ public class ControladorPersonajeIndependiente : BasePlayerController
     public void OnActivarInteraccionConBloque(InputAction.CallbackContext context)
     {
         if (!context.performed || playerInputPersonaje == null || !playerInputPersonaje.enabled) return;
-        if (!personajeEstaEnZonaPlataforma || plataformaActual == null) return;
 
-        var bloques = plataformaActual.GetBloquesSobrePlataforma();
-        if (bloques != null && bloques.Count > 0)
+        if (bloquesFueraDePlataforma.Count > 0)
         {
-            // Si ya está en modo interactuar, al presionar E se desmarca el bloque seleccionado
             if (bloqueHandler != null && bloqueHandler.IsInInteractMode)
             {
                 bloqueHandler.ResetBloque();
                 return;
             }
 
-            // Si NO quieres usar raycast y quieres que se pueda marcar cualquier bloque (todos los bloques sobre la plataforma):
-            // Marca todos los bloques para manipulación
-            foreach (var bloque in bloques)
+            Camera cam = Camera.main;
+            if (cam != null)
             {
-                if (bloque != null)
-                    bloqueHandler.PrepareBloque(bloque.gameObject);
+                Ray ray = cam.ScreenPointToRay(Mouse.current.position.ReadValue());
+                RaycastHit hit;
+                if (Physics.Raycast(ray, out hit, 100f))
+                {
+                    GameObject bloqueGO = hit.collider.gameObject;
+                    if (bloqueGO.CompareTag(tagBloque))
+                    {
+                        Rigidbody rbHit = bloqueGO.GetComponent<Rigidbody>();
+                        MovementBloque movementBloque = bloqueGO.GetComponent<MovementBloque>();
+                        if (rbHit != null && movementBloque != null && bloquesFueraDePlataforma.Contains(rbHit))
+                        {
+                            bloqueHandler.PrepareBloque(bloqueGO);
+                            return;
+                        }
+                    }
+                }
             }
+            bloqueHandler.ResetBloque();
         }
         else
         {
@@ -178,6 +192,15 @@ public class ControladorPersonajeIndependiente : BasePlayerController
         else if (other.CompareTag(tagBloque))
         {
             objetoBloqueEnTrigger = other.gameObject;
+            Rigidbody rbBloque = other.GetComponent<Rigidbody>();
+            if (rbBloque != null)
+            {
+                // Si el bloque NO está sobre la plataforma, lo agregamos a la lista de bloques manipulables
+                if (plataformaActual == null || !plataformaActual.EstaBloqueSobrePlataforma(rbBloque))
+                {
+                    bloquesFueraDePlataforma.Add(rbBloque);
+                }
+            }
         }
         else if (other.CompareTag(tagZonaInteraccionPlataforma))
         {
@@ -216,6 +239,21 @@ public class ControladorPersonajeIndependiente : BasePlayerController
                 bloqueSeleccionadoIndex = 0;
             }
         }
+        else if (other.CompareTag(tagBloque))
+        {
+            Rigidbody rbBloque = other.GetComponent<Rigidbody>();
+            if (rbBloque != null)
+            {
+                bloquesFueraDePlataforma.Remove(rbBloque);
+            }
+        }
+    }
+
+    // Método para verificar si el bloque está en el suelo (puedes ajustar la lógica según tu juego)
+    private bool EstaEnSuelo(Rigidbody bloque)
+    {
+        // Considera que el bloque está en el suelo si su velocidad vertical es casi cero y está cerca del suelo (y <= 0.1)
+        return Mathf.Abs(bloque.linearVelocity.y) < 0.1f && bloque.transform.position.y <= 0.1f;
     }
 
     void OnDrawGizmos()

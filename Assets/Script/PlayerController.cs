@@ -88,7 +88,7 @@ public class PlayerController : BasePlayerController
             {
                 bloqueRb.linearVelocity = Vector3.zero;
                 bloqueRb.angularVelocity = Vector3.zero;
-                bloqueRb.isKinematic = true;
+                // NO poner bloqueRb.isKinematic = true;  // <- Cambiado: los bloques sobre la plataforma NO serán kinematic
             }
         }
     }
@@ -119,7 +119,7 @@ public class PlayerController : BasePlayerController
                 {
                     bloqueRb.linearVelocity = Vector3.zero;
                     bloqueRb.angularVelocity = Vector3.zero;
-                    bloqueRb.isKinematic = true;
+                    // NO poner bloqueRb.isKinematic = true;  // <- Cambiado: los bloques sobre la plataforma NO serán kinematic
                 }
             }
         }
