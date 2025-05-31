@@ -21,7 +21,7 @@ public class ControladorPersonajeIndependiente : BasePlayerController
     [SerializeField] private string tagBloque = "Bloque";
     [SerializeField] private string tagZonaInteraccionPlataforma = "ZonaInteraccionPlataforma";
 
-    [SerializeField] private PlayerInput playerInputPersonaje; // Usará this.playerInput de BasePlayerController
+    [SerializeField] private PlayerInput playerInputPersonaje;
     [SerializeField] private PlayerInput playerInputPlataforma;
 
     private bool puedeAgarrarsePlataforma = false;
@@ -34,19 +34,68 @@ public class ControladorPersonajeIndependiente : BasePlayerController
 
     protected override void Awake()
     {
-        base.Awake();
+        base.Awake(); // Esto obtiene this.rb y this.playerInput
         bloqueHandler = GetComponent<BloqueInteractionHandler>();
         taiyokenAbility = GetComponent<Taiyoken>();
 
         if (this.playerInput == null)
         {
-            Debug.LogError("PlayerInput del personaje NO ENCONTRADO. El control del personaje no funcionará.", this);
+            Debug.LogError("PlayerInput del personaje (this.playerInput) NO ENCONTRADO. El control del personaje no funcionará.", this);
+        }
+
+        if (playerInputPlataforma == null)
+        {
+            Debug.LogWarning("Referencia a playerInputPlataforma no asignada en ControladorPersonajeIndependiente. No se podrá activar el input de la plataforma desde aquí si el personaje comienza agarrado.", this);
         }
 
         GameEventsManager.OnRequestControlPersonaje += HandleRequestControlPersonaje;
 
-        if (this.playerInput != null) this.playerInput.enabled = true;
-        if (playerInputPlataforma != null) playerInputPlataforma.enabled = false;
+        // Lógica para comenzar agarrado a la plataforma:
+        // Verifica que las referencias necesarias estén asignadas en el Inspector.
+        if (plataformaTransform != null && puntoDeAgarreEnPlataforma != null && this.playerInput != null && rb != null)
+        {
+            Debug.Log("Configurando personaje para comenzar agarrado a la plataforma.");
+
+            // 1. Desactivar input del personaje
+            this.playerInput.enabled = false;
+            _inputDirection = Vector3.zero; // Resetea el vector de input si lo usas para movimiento
+            _currentSpeed = 0f;             // Resetea la velocidad actual si la usas
+
+            // 2. Posicionar y emparentar el personaje
+            transform.position = puntoDeAgarreEnPlataforma.position;
+            transform.rotation = puntoDeAgarreEnPlataforma.rotation;
+            transform.SetParent(plataformaTransform, true);
+
+            // 3. Hacer el Rigidbody del personaje Kinematic
+            rb.isKinematic = true;
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+
+            // 4. Activar input de la plataforma
+            if (playerInputPlataforma != null)
+            {
+                playerInputPlataforma.enabled = true;
+                Debug.Log("Input de la plataforma activado por el personaje al inicio.");
+            }
+            else
+            {
+                Debug.LogError("No se puede activar el input de la plataforma porque playerInputPlataforma no está asignado en ControladorPersonajeIndependiente.", this);
+            }
+        }
+        else
+        {
+            // Comportamiento por defecto si no se cumplen las condiciones para agarrar la plataforma:
+            // El personaje comienza con el control.
+            Debug.Log("Personaje comenzando de forma independiente. Faltan referencias (plataformaTransform, puntoDeAgarreEnPlataforma) o componentes (this.playerInput, rb).");
+            if (this.playerInput != null)
+            {
+                this.playerInput.enabled = true; // Personaje toma control
+            }
+            if (playerInputPlataforma != null)
+            {
+                playerInputPlataforma.enabled = false; // Plataforma no tiene control
+            }
+        }
 
         if (taiyokenAbility == null)
         {
@@ -65,8 +114,6 @@ public class ControladorPersonajeIndependiente : BasePlayerController
 
     void Update()
     {
-        // La lógica de input (OnMove) actualiza _inputDirection.
-        // La lógica de arrastre de bloques puede permanecer en Update si no involucra física directa del personaje.
         if (bloqueHandler != null && bloqueHandler.IsDragging)
         {
             bloqueHandler.UpdateDrag();
@@ -77,8 +124,6 @@ public class ControladorPersonajeIndependiente : BasePlayerController
     {
         if (rb == null || playerInput == null || !playerInput.enabled) return;
 
-        // Calcular velocidad y rotación en FixedUpdate para sincronizar con la física.
-        // Usar Time.fixedDeltaTime para los cálculos dependientes del tiempo en FixedUpdate.
         CalculateSpeedLogic(Time.fixedDeltaTime);
         LookLogic(Time.fixedDeltaTime);
         MoveLogic();
@@ -114,16 +159,10 @@ public class ControladorPersonajeIndependiente : BasePlayerController
 
     private void MoveLogic()
     {
-        // rb.MoveRotation en LookLogic debería haber actualizado la orientación del Rigidbody para este paso de física.
-        // transform.forward ahora debería reflejar esa nueva orientación.
         Vector3 moveVelocity = transform.forward * _currentSpeed;
         
-        // Mantenemos la velocidad vertical actual del Rigidbody (manejada por la gravedad de Unity)
         Vector3 targetVelocity = new Vector3(moveVelocity.x, rb.linearVelocity.y, moveVelocity.z);
         rb.linearVelocity = targetVelocity;
-
-        // Para depuración, puedes añadir esto:
-        // Debug.Log($"Input: {_inputDirection}, Speed: {_currentSpeed}, transform.forward: {transform.forward}, TargetVel: {targetVelocity}");
     }
 
     public void OnMove(InputAction.CallbackContext context)

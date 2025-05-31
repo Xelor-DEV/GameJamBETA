@@ -12,12 +12,29 @@ public class PlayerController : BasePlayerController
     [SerializeField] private List<Rigidbody> bloquesSobrePlataforma = new List<Rigidbody>();
 
     protected override void Awake()
+{
+    base.Awake(); // Obtiene this.rb
+    if (playerInputPlataforma == null)
     {
-        base.Awake();
-        if (playerInputPlataforma == null)
-            playerInputPlataforma = GetComponent<PlayerInput>();
-        GameEventsManager.OnRequestControlPlataforma += HandleRequestControlPlataforma;
+        playerInputPlataforma = GetComponent<PlayerInput>(); // Intenta obtener el PlayerInput de la plataforma
     }
+
+    if (playerInputPlataforma == null)
+    {
+        Debug.LogError("PlayerInput de la plataforma (playerInputPlataforma) NO ENCONTRADO en " + gameObject.name + ". El control de la plataforma no funcionará.", this);
+    }
+    // No se establece playerInputPlataforma.enabled aquí explícitamente.
+    // Se asume que ControladorPersonajeIndependiente lo manejará si el personaje comienza agarrado,
+    // o que el estado por defecto del componente PlayerInput en el Inspector es el deseado si no hay agarre inicial.
+
+    // Lo mismo para playerInputPersonaje.enabled.
+    // if (playerInputPersonaje != null)
+    // {
+    //     playerInputPersonaje.enabled = false; // El estado inicial del personaje lo maneja su propio script.
+    // }
+
+    GameEventsManager.OnRequestControlPlataforma += HandleRequestControlPlataforma;
+}
 
     void OnDestroy()
     {
