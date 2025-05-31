@@ -7,6 +7,7 @@ TagManager:
   - Bloque
   - PuntoDeAgarrePlataforma
   - ZonaInteraccionPlataforma
+  - Enemy
   layers:
   - Default
   - TransparentFX
