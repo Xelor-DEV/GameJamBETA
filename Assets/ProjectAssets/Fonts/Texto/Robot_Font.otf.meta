@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: c76ab46158c536240b6e2b5e2a4e1fd5
+guid: fed04eeada4ba344cb8d631b409286db
 TrueTypeFontImporter:
   externalObjects: {}
   serializedVersion: 4
@@ -9,7 +9,7 @@ TrueTypeFontImporter:
   characterPadding: 1
   includeFontData: 1
   fontNames:
-  - Wide awake
+  - Robot_Font
   fallbackFontReferences: []
   customCharacters: 
   fontRenderingMode: 0
