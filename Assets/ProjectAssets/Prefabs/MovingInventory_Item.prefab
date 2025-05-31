@@ -232,6 +232,7 @@ MonoBehaviour:
   startingQuantity: 2
   currentQuantity: 0
   inventoryManager: {fileID: 0}
+  itemPrefab: {fileID: 0}
 --- !u!114 &5995354820915118095
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -278,8 +279,8 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 1506208815240349345}
         m_TargetAssemblyTypeName: InventoryItem, Assembly-CSharp
-        m_MethodName: ModifyQuantity
-        m_Mode: 3
+        m_MethodName: OnItemButtonClicked
+        m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
           m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
