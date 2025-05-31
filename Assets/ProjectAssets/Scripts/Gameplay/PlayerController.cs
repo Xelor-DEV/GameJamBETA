@@ -26,9 +26,6 @@ public class PlayerController : BasePlayerController
 
     void OnEnable()
     {
-        // Elimina la llamada masiva para evitar lag al iniciar
-        // if (rb != null && rb.isKinematic)
-        //     LiberarPlataformaYBloques();
     }
 
     void OnDisable()
@@ -38,7 +35,6 @@ public class PlayerController : BasePlayerController
 
     private void HandleRequestControlPlataforma()
     {
-        // Solo aquí se libera la plataforma y los bloques
         LiberarPlataformaYBloques();
         if (playerInputPlataforma != null) playerInputPlataforma.enabled = true;
         if (playerInputPersonaje != null) playerInputPersonaje.enabled = false;
@@ -88,7 +84,6 @@ public class PlayerController : BasePlayerController
             {
                 bloqueRb.linearVelocity = Vector3.zero;
                 bloqueRb.angularVelocity = Vector3.zero;
-                bloqueRb.isKinematic = true;
             }
         }
     }
@@ -119,7 +114,6 @@ public class PlayerController : BasePlayerController
                 {
                     bloqueRb.linearVelocity = Vector3.zero;
                     bloqueRb.angularVelocity = Vector3.zero;
-                    bloqueRb.isKinematic = true;
                 }
             }
         }

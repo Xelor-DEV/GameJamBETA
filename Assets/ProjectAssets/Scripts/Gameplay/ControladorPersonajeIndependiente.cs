@@ -1,6 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
-using System.Collections.Generic; // <-- Agrega esta línea
+using System.Collections.Generic;
 
 public class ControladorPersonajeIndependiente : BasePlayerController
 {
@@ -21,18 +21,41 @@ public class ControladorPersonajeIndependiente : BasePlayerController
     private PlayerController plataformaActual = null;
 
     private BloqueInteractionHandler bloqueHandler;
+    private Taiyoken taiyokenAbility;
 
     private int bloqueSeleccionadoIndex = 0;
+    private HashSet<Rigidbody> bloquesEnSuelo = new HashSet<Rigidbody>();
+    private HashSet<Rigidbody> bloquesFueraDePlataforma = new HashSet<Rigidbody>();
 
     protected override void Awake()
     {
         base.Awake();
         bloqueHandler = GetComponent<BloqueInteractionHandler>();
+        taiyokenAbility = GetComponent<Taiyoken>();
+
         if (playerInputPersonaje == null)
+        {
+            Debug.LogWarning("PlayerInput del personaje no asignado en el Inspector. Intentando obtenerlo del GameObject.", this);
             playerInputPersonaje = GetComponent<PlayerInput>();
+        }
+        if (playerInputPersonaje == null)
+        {
+            Debug.LogError("PlayerInput del personaje NO ENCONTRADO. El control del personaje no funcionará.", this);
+        }
+
         GameEventsManager.OnRequestControlPersonaje += HandleRequestControlPersonaje;
+
         if (playerInputPersonaje != null) playerInputPersonaje.enabled = true;
         if (playerInputPlataforma != null) playerInputPlataforma.enabled = false;
+
+        if (taiyokenAbility == null)
+        {
+            Debug.LogWarning("ControladorPersonajeIndependiente no encontró el componente Taiyoken. La habilidad no funcionará.", this);
+        }
+         if (bloqueHandler == null)
+        {
+            Debug.LogError("ControladorPersonajeIndependiente no encontró el componente BloqueInteractionHandler. El arrastre de bloques no funcionará.", this);
+        }
     }
 
     void OnDestroy()
@@ -40,37 +63,24 @@ public class ControladorPersonajeIndependiente : BasePlayerController
         GameEventsManager.OnRequestControlPersonaje -= HandleRequestControlPersonaje;
     }
 
-    void OnEnable()
+    protected override void EnableInput(bool enable)
     {
-        if (rb != null)
+        if (playerInputPersonaje != null)
         {
-            rb.isKinematic = false;
-            rb.useGravity = false;
+            playerInputPersonaje.enabled = enable;
         }
-    }
-
-    void OnDisable()
-    {
-        moveInput = Vector2.zero;
-        if (rb != null)
-        {
-            rb.linearVelocity = Vector3.zero;
-            rb.angularVelocity = Vector3.zero;
-        }
-        puedeAgarrarsePlataforma = false;
-        bloqueHandler?.ResetBloque();
-        personajeEstaEnZonaPlataforma = false;
-        plataformaActual = null;
     }
 
     private void HandleRequestControlPersonaje()
     {
+        Debug.Log("Manejando solicitud de control para el Personaje");
         if (plataformaTransform != null && transform.parent == plataformaTransform)
+        {
             transform.SetParent(null, true);
+        }
         if (rb != null)
         {
             rb.isKinematic = false;
-            rb.useGravity = false;
         }
         if (playerInputPersonaje != null) playerInputPersonaje.enabled = true;
         if (playerInputPlataforma != null) playerInputPlataforma.enabled = false;
@@ -80,15 +90,21 @@ public class ControladorPersonajeIndependiente : BasePlayerController
     public void OnMove(InputAction.CallbackContext context)
     {
         if (playerInputPersonaje != null && playerInputPersonaje.enabled && (bloqueHandler == null || !bloqueHandler.IsDragging))
+        {
             moveInput = context.ReadValue<Vector2>();
+        }
         else
+        {
             moveInput = Vector2.zero;
+        }
     }
 
     public void OnChangeControl(InputAction.CallbackContext context)
     {
-        if (context.performed && playerInputPersonaje != null && playerInputPersonaje.enabled && puedeAgarrarsePlataforma && puntoDeAgarreEnPlataforma != null && plataformaTransform != null)
+        if (context.performed && playerInputPersonaje != null && playerInputPersonaje.enabled &&
+            puedeAgarrarsePlataforma && puntoDeAgarreEnPlataforma != null && plataformaTransform != null)
         {
+            Debug.Log("Cambiando control a Plataforma");
             bloqueHandler?.ResetBloque();
             transform.position = puntoDeAgarreEnPlataforma.position;
             transform.rotation = puntoDeAgarreEnPlataforma.rotation;
@@ -108,46 +124,62 @@ public class ControladorPersonajeIndependiente : BasePlayerController
 
     public void OnActivarInteraccionConBloque(InputAction.CallbackContext context)
     {
-        if (!context.performed || playerInputPersonaje == null || !playerInputPersonaje.enabled) return;
-        if (!personajeEstaEnZonaPlataforma || plataformaActual == null) return;
+        if (!context.performed || playerInputPersonaje == null || !playerInputPersonaje.enabled || bloqueHandler == null) return;
 
-        var bloques = plataformaActual.GetBloquesSobrePlataforma();
-        if (bloques != null && bloques.Count > 0)
+        if (bloqueHandler.IsInInteractMode)
         {
-            // Si ya está en modo interactuar, al presionar E se desmarca el bloque seleccionado
-            if (bloqueHandler != null && bloqueHandler.IsInInteractMode)
-            {
-                bloqueHandler.ResetBloque();
-                return;
-            }
+            bloqueHandler.ResetBloque();
+            return;
+        }
 
-            // Si NO quieres usar raycast y quieres que se pueda marcar cualquier bloque (todos los bloques sobre la plataforma):
-            // Marca todos los bloques para manipulación
-            foreach (var bloque in bloques)
+        Camera cam = Camera.main;
+        if (cam != null && Mouse.current != null)
+        {
+            Ray ray = cam.ScreenPointToRay(Mouse.current.position.ReadValue());
+            RaycastHit hit;
+            if (Physics.Raycast(ray, out hit, 100f))
             {
-                if (bloque != null)
-                    bloqueHandler.PrepareBloque(bloque.gameObject);
+                GameObject bloqueGO = hit.collider.gameObject;
+                if (bloqueGO.CompareTag(tagBloque))
+                {
+                    bloqueHandler.PrepareBloque(bloqueGO);
+                    return;
+                }
             }
         }
-        else
-        {
-            bloqueHandler?.ResetBloque();
-        }
+        bloqueHandler.ResetBloque();
     }
 
     public void OnArrastrarBloqueConClick(InputAction.CallbackContext context)
     {
-        if (playerInputPersonaje == null || !playerInputPersonaje.enabled || bloqueHandler == null || !bloqueHandler.IsInInteractMode)
+        if (playerInputPersonaje == null || !playerInputPersonaje.enabled || bloqueHandler == null)
         {
-            if (context.canceled)
-                bloqueHandler?.EndDrag();
+            if (context.canceled) bloqueHandler?.EndDrag();
             return;
         }
 
+        if (!bloqueHandler.IsInInteractMode) return;
+
         if (context.started)
+        {
             bloqueHandler.StartDrag();
+        }
         else if (context.canceled)
+        {
             bloqueHandler.EndDrag();
+        }
+    }
+
+    public void OnActivateTaiyoken(InputAction.CallbackContext context)
+    {
+        if (context.performed && playerInputPersonaje != null && playerInputPersonaje.enabled && taiyokenAbility != null)
+        {
+            taiyokenAbility.ActivateTaiyoken();
+        }
+        else if (context.performed && taiyokenAbility == null)
+        {
+            Debug.LogWarning("Se intentó activar Taiyoken, pero el componente no está asignado/encontrado.");
+        }
     }
 
     void Update()
@@ -155,17 +187,17 @@ public class ControladorPersonajeIndependiente : BasePlayerController
         if (bloqueHandler != null && bloqueHandler.IsDragging)
         {
             bloqueHandler.UpdateDrag();
-            moveInput = Vector2.zero;
         }
     }
 
     void FixedUpdate()
     {
         if (rb == null || playerInputPersonaje == null || !playerInputPersonaje.enabled) return;
+
         if (moveInput != Vector2.zero && !rb.isKinematic && (bloqueHandler == null || !bloqueHandler.IsDragging))
         {
-            Vector3 direccionInput = new Vector3(moveInput.x, 0, moveInput.y);
-            rb.MovePosition(rb.position + direccionInput.normalized * velocidadMovimiento * Time.fixedDeltaTime);
+            Vector3 direccionInput = new Vector3(moveInput.x, 0, moveInput.y).normalized;
+            rb.MovePosition(rb.position + direccionInput * velocidadMovimiento * Time.fixedDeltaTime);
         }
     }
 
@@ -187,11 +219,6 @@ public class ControladorPersonajeIndependiente : BasePlayerController
                 plataformaActual = pc;
                 personajeEstaEnZonaPlataforma = true;
             }
-            else
-            {
-                personajeEstaEnZonaPlataforma = false;
-                plataformaActual = null;
-            }
         }
     }
 
@@ -203,33 +230,22 @@ public class ControladorPersonajeIndependiente : BasePlayerController
         }
         else if (other.gameObject == objetoBloqueEnTrigger)
         {
-            bloqueHandler?.ResetBloque();
+            // Esta comparación es un poco torpe, idealmente tendrías una referencia directa
+            // if (bloqueHandler != null && bloqueHandler.IsInInteractMode && bloqueHandler.IsDragging &&
+            //     (bloqueHandler as BloqueInteractionHandler)?.ToString() == objetoBloqueEnTrigger?.GetComponent<MovementBloque>()?.ToString())
+            // {
+            //      // bloqueHandler.ResetBloque(); // Ojo: esto podría ser abrupto si el jugador lo saca del trigger mientras arrastra
+            // }
             objetoBloqueEnTrigger = null;
         }
         else if (other.CompareTag(tagZonaInteraccionPlataforma))
         {
-            if (plataformaActual != null && other.GetComponentInParent<PlayerController>() == plataformaActual)
+             PlayerController pc = other.GetComponentInParent<PlayerController>();
+            if (plataformaActual != null && pc == plataformaActual)
             {
                 personajeEstaEnZonaPlataforma = false;
                 plataformaActual = null;
-                bloqueHandler?.ResetBloque();
-                bloqueSeleccionadoIndex = 0;
             }
-        }
-    }
-
-    void OnDrawGizmos()
-    {
-        if (!Application.isPlaying) return;
-        if (!personajeEstaEnZonaPlataforma || plataformaActual == null) return;
-
-        Camera cam = Camera.main;
-        if (cam != null)
-        {
-            Vector2 mousePos = Mouse.current != null ? Mouse.current.position.ReadValue() : Vector2.zero;
-            Ray ray = cam.ScreenPointToRay(mousePos);
-            Gizmos.color = Color.red;
-            Gizmos.DrawRay(ray.origin, ray.direction * 100f);
         }
     }
 }
