@@ -1924,8 +1924,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0.0014877, y: -17}
-  m_SizeDelta: {x: 804.5557, y: 514.5524}
+  m_AnchoredPosition: {x: 0.0014877, y: -16.376009}
+  m_SizeDelta: {x: 804.556, y: 513.305}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &483817939
 MonoBehaviour:
@@ -1949,26 +1949,17 @@ MonoBehaviour:
       m_Calls: []
   m_text: 'Movement: WASD
 
-    Drop tray/Pick up tray: F
+    Drop/Pick Platform: E
 
-    Interact/Pick up object:
-    E
+    Flash: F
 
-    Select object: Left Click
-
-    Sort object: Drag with Left Click when
-    interacting with the tray on the ground.
-
-    Aim: Right Click
-
-    Throw: (Aiming)
-    Left Click
 
 
     Objective:
 
-    Get as many objects as possible to the target
-    in the shortest possible time to get a good score!'
+    Get
+    as many objects as possible to the target in the shortest possible time to get
+    a good score!'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: ec83f577a4faa6945ba16be61e999efe, type: 2}
   m_sharedMaterial: {fileID: 1565202249590213916, guid: ec83f577a4faa6945ba16be61e999efe, type: 2}
@@ -1995,7 +1986,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 37.2
+  m_fontSize: 40
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
