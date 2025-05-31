@@ -35,7 +35,6 @@ public class PlayerController : BasePlayerController
 
     private void HandleRequestControlPlataforma()
     {
-        LiberarPlataformaYBloques();
         if (playerInputPlataforma != null) playerInputPlataforma.enabled = true;
         if (playerInputPersonaje != null) playerInputPersonaje.enabled = false;
     }
@@ -52,7 +51,6 @@ public class PlayerController : BasePlayerController
     {
         if (context.performed && playerInputPlataforma != null && playerInputPlataforma.enabled)
         {
-            FijarPlataformaYBloques();
             if (playerInputPlataforma != null) playerInputPlataforma.enabled = false;
             if (playerInputPersonaje != null) playerInputPersonaje.enabled = true;
             GameEventsManager.RequestControlPersonaje();
@@ -68,79 +66,11 @@ public class PlayerController : BasePlayerController
             Vector3 direccionInput = new Vector3(moveInputPlataforma.x, 0, moveInputPlataforma.y);
             rb.AddForce(direccionInput.normalized * fuerzaMovimiento, ForceMode.Force);
         }
-    }
-
-    void FijarPlataformaYBloques()
-    {
-        if (rb != null)
+        if (transform.childCount > 0) // Si el personaje es hijo
         {
-            rb.linearVelocity = Vector3.zero;
-            rb.angularVelocity = Vector3.zero;
-            rb.isKinematic = true;
+            bool isPlatformMoving = moveInputPlataforma != Vector2.zero;
+            var character = transform.GetComponentInChildren<ControladorPersonajeIndependiente>();
+            character.animator.SetBool("isMoving", isPlatformMoving);
         }
-        foreach (Rigidbody bloqueRb in bloquesSobrePlataforma)
-        {
-            if (bloqueRb != null)
-            {
-                bloqueRb.linearVelocity = Vector3.zero;
-                bloqueRb.angularVelocity = Vector3.zero;
-            }
-        }
-    }
-
-    void LiberarPlataformaYBloques()
-    {
-        if (rb != null)
-            rb.isKinematic = false;
-        foreach (Rigidbody bloqueRb in bloquesSobrePlataforma)
-        {
-            if (bloqueRb != null)
-            {
-                bloqueRb.isKinematic = false;
-            }
-        }
-    }
-
-    void OnTriggerEnter(Collider other)
-    {
-        if (other.CompareTag("Bloque"))
-        {
-            Rigidbody bloqueRb = other.GetComponent<Rigidbody>();
-            if (bloqueRb == null) return;
-            if (!bloquesSobrePlataforma.Contains(bloqueRb))
-            {
-                bloquesSobrePlataforma.Add(bloqueRb);
-                if (rb != null && rb.isKinematic)
-                {
-                    bloqueRb.linearVelocity = Vector3.zero;
-                    bloqueRb.angularVelocity = Vector3.zero;
-                }
-            }
-        }
-    }
-
-    void OnTriggerExit(Collider other)
-    {
-        if (other.CompareTag("Bloque"))
-        {
-            Rigidbody bloqueRb = other.GetComponent<Rigidbody>();
-            if (bloqueRb == null) return;
-            if (bloquesSobrePlataforma.Contains(bloqueRb))
-            {
-                bloquesSobrePlataforma.Remove(bloqueRb);
-                bloqueRb.isKinematic = false;
-            }
-        }
-    }
-
-    public bool EstaBloqueSobrePlataforma(Rigidbody bloqueConsultadoRb)
-    {
-        if (bloqueConsultadoRb == null) return false;
-        return bloquesSobrePlataforma.Contains(bloqueConsultadoRb);
-    }
-
-    public List<Rigidbody> GetBloquesSobrePlataforma()
-    {
-        return bloquesSobrePlataforma;
     }
 }

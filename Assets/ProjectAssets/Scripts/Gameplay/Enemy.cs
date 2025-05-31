@@ -1,140 +1,223 @@
 using UnityEngine;
+using UnityEngine.AI;
 using System.Collections;
 
 public class Enemy : MonoBehaviour
 {
-    public bool isStunned = false;
-    private float stunTimer = 0f;
-
     [Header("Patrol Settings")]
-    public Transform pointA;
-    public Transform pointB;
-    public float moveSpeed = 3f;
-    private Transform currentTarget;
+    public Transform[] patrolPoints;
+    public float patrolSpeed = 3f;
+    public float waitTimeAtPoint = 1.5f;
 
-    // Guarda aquí referencias a componentes que controlan el comportamiento del enemigo
-    // Ejemplo: private UnityEngine.AI.NavMeshAgent agent;
-    // Ejemplo: private Animator animator;
-    // Ejemplo: private EnemyAttack enemyAttackScript;
+    [Header("Chase Settings")]
+    public float detectionRange = 8f;
+    public float chaseSpeed = 6f;
+    public float chaseRange = 15f;
+    public float rotationSpeed = 5f;
 
-    void Awake()
+    [Header("Attack Settings")]
+    public float pushForce = 10f;
+    public float pushHeight = 2f;
+    public float attackCooldown = 2f;
+
+    [Header("References")]
+    public string playerTag = "Player";
+
+    private NavMeshAgent agent;
+    private Transform player;
+    private Rigidbody rb;
+    private int currentPatrolIndex = 0;
+    private bool isChasing = false;
+    private bool isWaiting = false;
+    private bool canAttack = true;
+    private bool isStunned = false;
+
+    void Start()
     {
-        // Obtén referencias a los componentes de tu enemigo aquí
-        // agent = GetComponent<UnityEngine.AI.NavMeshAgent>();
-        // animator = GetComponent<Animator>();
-        // enemyAttackScript = GetComponent<EnemyAttack>();
+        agent = GetComponent<NavMeshAgent>();
+        rb = GetComponent<Rigidbody>();
+        player = GameObject.FindGameObjectWithTag(playerTag).transform;
 
-        if (pointA != null)
-        {
-            currentTarget = pointA; // Empezar moviéndose hacia el punto A
-        }
-        else if (pointB != null)
-        {
-            currentTarget = pointB;
-        }
-        else
-        {
-            Debug.LogError("Los puntos de patrulla A y B no están asignados en el enemigo: " + gameObject.name);
-            // Desactivar el movimiento si no hay puntos
-        }
+        // Configuración inicial
+        agent.speed = patrolSpeed;
+        SetNextPatrolPoint();
     }
 
     void Update()
     {
-        if (isStunned)
-        {
-            // Lógica cuando está aturdido (generalmente, no hacer nada o animación de aturdimiento)
-            // Por ejemplo, detener el NavMeshAgent:
-            // if (agent != null && agent.isOnNavMesh) agent.isStopped = true;
-            return; // No hacer nada más si está aturdido
-        }
+        if (isStunned) return;
 
-        // Lógica normal del enemigo (movimiento, ataque, etc.)
-        // Asegúrate de que esta lógica solo se ejecute si no está aturdido.
-        // Por ejemplo, reactivar el NavMeshAgent si se detuvo:
-        // if (agent != null && agent.isOnNavMesh && agent.isStopped) agent.isStopped = false;
-
-        // Movimiento de patrulla simple
-        if (currentTarget != null)
+        // Manejo de patrulla y persecución
+        if (isChasing)
         {
-            MoveTowardsTarget();
+            ChasePlayer();
         }
         else
         {
-            // Aquí iría tu IA normal si no hay patrulla o si la patrulla es solo una parte
-            // Debug.Log(gameObject.name + " está activo pero sin target de patrulla.");
+            Patrol();
+            CheckForPlayer();
         }
     }
 
-    void MoveTowardsTarget()
+    void Patrol()
     {
-        if (Vector3.Distance(transform.position, currentTarget.position) < 0.1f)
+        if (isWaiting || patrolPoints.Length == 0) return;
+
+        // Verificar si ha llegado al punto de patrulla
+        if (agent.remainingDistance <= agent.stoppingDistance && !agent.pathPending)
         {
-            // Ha llegado al punto, cambiar de objetivo
-            if (currentTarget == pointA && pointB != null)
-            {
-                currentTarget = pointB;
-            }
-            else if (currentTarget == pointB && pointA != null)
-            {
-                currentTarget = pointA;
-            }
-            // Si solo hay un punto asignado, se quedará quieto después de alcanzarlo.
+            StartCoroutine(WaitAtPoint());
         }
-        else
+    }
+
+    IEnumerator WaitAtPoint()
+    {
+        isWaiting = true;
+        yield return new WaitForSeconds(waitTimeAtPoint);
+        SetNextPatrolPoint();
+        isWaiting = false;
+    }
+
+    void SetNextPatrolPoint()
+    {
+        if (patrolPoints.Length == 0) return;
+
+        currentPatrolIndex = (currentPatrolIndex + 1) % patrolPoints.Length;
+        agent.SetDestination(patrolPoints[currentPatrolIndex].position);
+    }
+
+    void CheckForPlayer()
+    {
+        // Detección del jugador usando OverlapSphere
+        Collider[] hitColliders = Physics.OverlapSphere(transform.position, detectionRange);
+        foreach (var collider in hitColliders)
         {
-            // Moverse hacia el objetivo
-            Vector3 direction = (currentTarget.position - transform.position).normalized;
-            transform.position += direction * moveSpeed * Time.deltaTime;
-            // Opcional: hacer que el enemigo mire hacia el objetivo
-            if (direction != Vector3.zero)
+            if (collider.CompareTag(playerTag))
             {
-                transform.rotation = Quaternion.LookRotation(direction);
+                StartChase();
+                return;
             }
         }
     }
 
+    void StartChase()
+    {
+        isChasing = true;
+        agent.speed = chaseSpeed;
+    }
 
+    void ChasePlayer()
+    {
+        // Perseguir al jugador
+        agent.SetDestination(player.position);
+
+        // Rotación suave hacia el jugador
+        FacePlayer();
+
+        // Verificar si el jugador se ha escapado
+        if (Vector3.Distance(transform.position, player.position) > chaseRange)
+        {
+            StopChase();
+        }
+    }
+
+    void FacePlayer()
+    {
+        Vector3 direction = (player.position - transform.position).normalized;
+        Quaternion lookRotation = Quaternion.LookRotation(new Vector3(direction.x, 0, direction.z));
+        transform.rotation = Quaternion.Slerp(transform.rotation, lookRotation, Time.deltaTime * rotationSpeed);
+    }
+
+    void StopChase()
+    {
+        isChasing = false;
+        agent.speed = patrolSpeed;
+
+        // Volver a patrullar
+        SetNextPatrolPoint();
+    }
+
+    void OnCollisionEnter(Collision collision)
+    {
+        // Empujar al jugador al colisionar
+        if (collision.gameObject.CompareTag(playerTag) && canAttack && !isStunned)
+        {
+            ApplyPushForce(collision.gameObject);
+            StartCoroutine(AttackCooldown());
+        }
+    }
+
+    void ApplyPushForce(GameObject player)
+    {
+        Rigidbody playerRb = player.GetComponent<Rigidbody>();
+        if (playerRb != null)
+        {
+            // Calcular dirección del empuje
+            Vector3 pushDirection = player.transform.position - transform.position;
+            pushDirection.y = 0; // Mantener dirección horizontal
+            pushDirection.Normalize();
+
+            // Aplicar fuerza con componente vertical
+            Vector3 forceVector = pushDirection * pushForce;
+            forceVector.y = pushHeight;
+
+            playerRb.AddForce(forceVector, ForceMode.Impulse);
+        }
+    }
+
+    IEnumerator AttackCooldown()
+    {
+        canAttack = false;
+        yield return new WaitForSeconds(attackCooldown);
+        canAttack = true;
+    }
+
+    // Método para ser aturdido por el Taiyoken
     public void Stun(float duration)
     {
-        if (isStunned) // Si ya está aturdido, podrías reiniciar el timer o ignorar
-        {
-            // Opcional: reiniciar duración si se aturde de nuevo mientras ya está aturdido
-            // stunTimer = duration;
-            // Debug.Log(gameObject.name + " ya estaba aturdido, se reinicia duración a: " + duration + "s");
-            return;
-        }
         StartCoroutine(StunCoroutine(duration));
     }
 
     IEnumerator StunCoroutine(float duration)
     {
         isStunned = true;
-        stunTimer = duration;
-        Debug.Log(gameObject.name + " ATURDIDO por " + duration + " segundos!");
+        agent.isStopped = true;
 
-        // Aquí desactivas los componentes de IA del enemigo:
-        // if (agent != null && agent.isOnNavMesh) agent.isStopped = true;
-        // if (animator != null) animator.speed = 0; // O cambia a una animación de "aturdido"
-        // if (enemyAttackScript != null) enemyAttackScript.enabled = false;
-        // También podrías cambiar el color, añadir un efecto de partículas sobre el enemigo, etc.
+        yield return new WaitForSeconds(duration);
 
-        // Para el movimiento simple, no necesitamos desactivar nada más explícitamente
-        // porque el Update() ya verifica isStunned.
-
-        while (stunTimer > 0)
-        {
-            stunTimer -= Time.deltaTime;
-            yield return null;
-        }
-
+        agent.isStopped = false;
         isStunned = false;
-        Debug.Log(gameObject.name + " ya NO está aturdido.");
+    }
 
-        // Aquí reactivas los componentes de IA del enemigo:
-        // if (agent != null && agent.isOnNavMesh) agent.isStopped = false;
-        // if (animator != null) animator.speed = 1;
-        // if (enemyAttackScript != null) enemyAttackScript.enabled = true;
-        // Restaurar color, quitar efectos, etc.
+    void OnDrawGizmosSelected()
+    {
+        // Rango de detección
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawWireSphere(transform.position, detectionRange);
+
+        // Rango de persecución
+        Gizmos.color = Color.red;
+        Gizmos.DrawWireSphere(transform.position, chaseRange);
+
+        // Ruta de patrulla
+        if (patrolPoints != null && patrolPoints.Length > 1)
+        {
+            Gizmos.color = Color.blue;
+            for (int i = 0; i < patrolPoints.Length; i++)
+            {
+                if (patrolPoints[i] != null)
+                {
+                    Gizmos.DrawSphere(patrolPoints[i].position, 0.3f);
+                    if (i < patrolPoints.Length - 1 && patrolPoints[i + 1] != null)
+                    {
+                        Gizmos.DrawLine(patrolPoints[i].position, patrolPoints[i + 1].position);
+                    }
+                    else if (patrolPoints[0] != null)
+                    {
+                        Gizmos.DrawLine(patrolPoints[i].position, patrolPoints[0].position);
+                    }
+                }
+            }
+        }
     }
 }

@@ -14,36 +14,39 @@ public class InventoryItem : MonoBehaviour
     [SerializeField] private UI_MovingInventory inventoryManager;
 
     [Header("Item Prefab")]
-    [SerializeField] private GameObject itemPrefab;  // Nueva variable para el prefab a spawnear
+    [SerializeField] private GameObject itemPrefab;
 
     void Start()
     {
         currentQuantity = startingQuantity;
         UpdateUI();
+        itemButton.onClick.AddListener(OnItemButtonClicked);
     }
 
     public void OnItemButtonClicked()
     {
-        if (currentQuantity > 0)
+        if (currentQuantity > 0 && inventoryManager != null)
         {
-            // Instanciar el prefab en la posición del ratón
-            Vector3 spawnPosition = Camera.main.ScreenToWorldPoint(
-                new Vector3(Input.mousePosition.x, Input.mousePosition.y, 10f)
+            // Instanciar en el punto de spawn del inventario
+            GameObject spawnedObject = Instantiate(
+                itemPrefab,
+                inventoryManager.GetSpawnPosition(),
+                Quaternion.identity
             );
-            GameObject spawnedObject = Instantiate(itemPrefab, spawnPosition, Quaternion.identity);
 
-            // Configurar Rigidbody
             Rigidbody rb = spawnedObject.GetComponent<Rigidbody>();
             if (rb != null)
             {
                 rb.isKinematic = true;
             }
 
-            // Añadir componente para manejar el arrastre
             DraggableItem draggable = spawnedObject.GetComponent<DraggableItem>();
-            draggable.SetRigidbody(rb);
 
-            // Reducir cantidad
+            draggable.SetInventoryManager(inventoryManager);
+
+            // Ocultar la ventana del inventario
+            inventoryManager.HideWindow();
+
             ModifyQuantity(-1);
         }
     }

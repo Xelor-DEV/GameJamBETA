@@ -12,18 +12,54 @@ public class UI_MovingInventory : MonoBehaviour
     [SerializeField] private RectTransform hidePosition;
     [SerializeField] private Image protector;
     [SerializeField] private InventoryItem[] inventoryItems;
+    [SerializeField] private Transform spawnPoint;
 
     [Header("Animation Settings")]
     [SerializeField] private float moveDuration = 0.5f;
     [SerializeField] private float appearDelay = 0.5f;
 
     private bool isAnimating = false;
-
+    private bool isHidden = false;
 
     void Start()
     {
         readyButton.interactable = false;
         StartCoroutine(AnimateWindow(hidePosition.position, startPosition.position, moveDuration, false, true));
+    }
+
+    public Vector3 GetSpawnPosition()
+    {
+        return spawnPoint.position;
+    }
+
+    public void HideWindow()
+    {
+        if (!isHidden)
+        {
+            StartCoroutine(AnimateWindow(
+                inventoryWindow.position,
+                hidePosition.position,
+                moveDuration,
+                true,
+                false
+            ));
+            isHidden = true;
+        }
+    }
+
+    public void ShowWindow()
+    {
+        if (isHidden)
+        {
+            StartCoroutine(AnimateWindow(
+                hidePosition.position,
+                startPosition.position,
+                moveDuration,
+                false,
+                true
+            ));
+            isHidden = false;
+        }
     }
 
     public void CheckReadyButtonState()
@@ -47,6 +83,14 @@ public class UI_MovingInventory : MonoBehaviour
         if (!isAnimating && readyButton.interactable)
         {
             StartCoroutine(AnimateWindow(inventoryWindow.position, hidePosition.position, moveDuration, true, false));
+
+            // Habilitar el movimiento del personaje y activar detección
+            ControladorPersonajeIndependiente playerController = Object.FindFirstObjectByType<ControladorPersonajeIndependiente>();
+            if (playerController != null)
+            {
+                playerController.HabilitarMovimiento();
+                playerController.ToggleBlockDetection(true);
+            }
         }
     }
 
@@ -79,7 +123,7 @@ public class UI_MovingInventory : MonoBehaviour
 
         if (deactivateAfter)
         {
-            inventoryWindow.gameObject.SetActive(false);
+            //inventoryWindow.gameObject.SetActive(false);
         }
     }
 }

@@ -8,11 +8,14 @@ TagManager:
   - PuntoDeAgarrePlataforma
   - ZonaInteraccionPlataforma
   - Enemy
+  - Suelo
+  - Plataforma
+  - Win
   layers:
   - Default
   - TransparentFX
   - Ignore Raycast
-  - 
+  - Blocks
   - Water
   - UI
   - 

@@ -13,6 +13,18 @@ public class ControladorPersonajeIndependiente : BasePlayerController
 
     private float _currentSpeed;
     private Vector3 _inputDirection;
+    private bool juegoIniciado = false;
+
+    [Header("Detección de Bloques")]
+    [SerializeField] private float blockDetectionRadius = 5f;
+    [SerializeField] private LayerMask blockDetectionLayer;
+    [SerializeField] private Color detectionGizmoColor = new Color(0, 1, 0, 0.25f);
+    [SerializeField] private Color activeDetectionGizmoColor = new Color(1, 0, 0, 0.5f);
+
+    private List<GameObject> nearbyBlocks = new List<GameObject>();
+    private bool isDetectionActive = false;
+
+
 
     [Header("Configuración General Anterior")]
     [SerializeField] private Transform plataformaTransform;
@@ -24,19 +36,31 @@ public class ControladorPersonajeIndependiente : BasePlayerController
     [SerializeField] private PlayerInput playerInputPersonaje; // Usará this.playerInput de BasePlayerController
     [SerializeField] private PlayerInput playerInputPlataforma;
 
+    [SerializeField] public Animator animator;
+
+    private bool wasMoving = false;
+    private bool wasCarrying = false;
+
     private bool puedeAgarrarsePlataforma = false;
     private GameObject objetoBloqueEnTrigger = null;
     private bool personajeEstaEnZonaPlataforma = false;
     private PlayerController plataformaActual = null;
 
-    private BloqueInteractionHandler bloqueHandler;
     private Taiyoken taiyokenAbility;
+
+    public bool JuegoIniciado
+    {
+        get
+        {
+            return juegoIniciado;
+        }
+    }
 
     protected override void Awake()
     {
         base.Awake();
-        bloqueHandler = GetComponent<BloqueInteractionHandler>();
         taiyokenAbility = GetComponent<Taiyoken>();
+      
 
         if (this.playerInput == null)
         {
@@ -52,10 +76,8 @@ public class ControladorPersonajeIndependiente : BasePlayerController
         {
             Debug.LogWarning("ControladorPersonajeIndependiente no encontró el componente Taiyoken.", this);
         }
-        if (bloqueHandler == null)
-        {
-            Debug.LogError("ControladorPersonajeIndependiente no encontró el componente BloqueInteractionHandler.", this);
-        }
+
+        ToggleBlockDetection(false);
     }
 
     void OnDestroy()
@@ -63,26 +85,84 @@ public class ControladorPersonajeIndependiente : BasePlayerController
         GameEventsManager.OnRequestControlPersonaje -= HandleRequestControlPersonaje;
     }
 
+    public void HabilitarMovimiento()
+    {
+        juegoIniciado = true;
+        if (this.playerInput != null)
+        {
+            this.playerInput.enabled = true;
+        }
+    }
+
     void Update()
     {
-        // La lógica de input (OnMove) actualiza _inputDirection.
-        // La lógica de arrastre de bloques puede permanecer en Update si no involucra física directa del personaje.
-        if (bloqueHandler != null && bloqueHandler.IsDragging)
+
+        // Actualizar solo cuando cambia el estado de movimiento
+        bool isMoving = _currentSpeed > 0.1f;
+        if (isMoving != wasMoving)
         {
-            bloqueHandler.UpdateDrag();
+            animator.SetBool("isMoving", isMoving);
+            wasMoving = isMoving;
+        }
+
+        // Actualizar solo cuando cambia el estado de carga
+        bool isCarrying = (transform.parent == plataformaTransform);
+        if (isCarrying != wasCarrying)
+        {
+            animator.SetBool("isCarrying", isCarrying);
+            wasCarrying = isCarrying;
         }
     }
 
     void FixedUpdate()
     {
-        if (rb == null || playerInput == null || !playerInput.enabled) return;
+        if (!juegoIniciado || rb == null || playerInput == null || !playerInput.enabled) return;
+
 
         // Calcular velocidad y rotación en FixedUpdate para sincronizar con la física.
         // Usar Time.fixedDeltaTime para los cálculos dependientes del tiempo en FixedUpdate.
         CalculateSpeedLogic(Time.fixedDeltaTime);
         LookLogic(Time.fixedDeltaTime);
         MoveLogic();
+
+        if (isDetectionActive)
+        {
+            DetectNearbyBlocks();
+        }
     }
+    public void ToggleBlockDetection(bool active)
+    {
+        isDetectionActive = active;
+        if (!active) nearbyBlocks.Clear();
+    }
+
+    private void DetectNearbyBlocks()
+    {
+        nearbyBlocks.Clear();
+        Collider[] hitColliders = Physics.OverlapSphere(transform.position, blockDetectionRadius, blockDetectionLayer);
+        foreach (var hitCollider in hitColliders)
+        {
+            // Solo detectar bloques en el suelo
+            if (hitCollider.CompareTag("Suelo"))
+            {
+                nearbyBlocks.Add(hitCollider.gameObject);
+            }
+        }
+    }
+
+    public bool CanDragBlock(GameObject block)
+    {
+        // En fase de juego, solo permitir arrastrar bloques cercanos
+        return juegoIniciado && nearbyBlocks.Contains(block);
+    }
+    void OnDrawGizmos()
+    {
+        if (!isDetectionActive) return;
+
+        Gizmos.color = nearbyBlocks.Count > 0 ? activeDetectionGizmoColor : detectionGizmoColor;
+        Gizmos.DrawSphere(transform.position, blockDetectionRadius);
+    }
+
 
     private void CalculateSpeedLogic(float deltaTime)
     {
@@ -128,7 +208,7 @@ public class ControladorPersonajeIndependiente : BasePlayerController
 
     public void OnMove(InputAction.CallbackContext context)
     {
-        if (playerInput == null || !playerInput.enabled)
+        if (!juegoIniciado || playerInput == null || !playerInput.enabled)
         {
             _inputDirection = Vector3.zero;
             return;
@@ -150,6 +230,7 @@ public class ControladorPersonajeIndependiente : BasePlayerController
 
     private void HandleRequestControlPersonaje()
     {
+        animator.SetTrigger("Drop");
         Debug.Log("Manejando solicitud de control para el Personaje");
         if (plataformaTransform != null && transform.parent == plataformaTransform)
         {
@@ -161,7 +242,6 @@ public class ControladorPersonajeIndependiente : BasePlayerController
         }
         EnableInput(true);
         if (playerInputPlataforma != null) playerInputPlataforma.enabled = false;
-        bloqueHandler?.ResetBloque();
     }
 
     public void OnChangeControl(InputAction.CallbackContext context)
@@ -169,9 +249,9 @@ public class ControladorPersonajeIndependiente : BasePlayerController
         if (context.performed && playerInput != null && playerInput.enabled &&
             puedeAgarrarsePlataforma && puntoDeAgarreEnPlataforma != null && plataformaTransform != null)
         {
+            animator.SetTrigger("Pickup");
             Debug.Log("Cambiando control a Plataforma");
             EnableInput(false);
-            bloqueHandler?.ResetBloque();
             transform.position = puntoDeAgarreEnPlataforma.position;
             transform.rotation = puntoDeAgarreEnPlataforma.rotation;
             transform.SetParent(plataformaTransform, true);
@@ -185,46 +265,6 @@ public class ControladorPersonajeIndependiente : BasePlayerController
             if (playerInputPlataforma != null) playerInputPlataforma.enabled = true;
             GameEventsManager.RequestControlPlataforma();
         }
-    }
-
-    public void OnActivarInteraccionConBloque(InputAction.CallbackContext context)
-    {
-        if (!context.performed || playerInput == null || !playerInput.enabled || bloqueHandler == null) return;
-
-        if (bloqueHandler.IsInInteractMode)
-        {
-            bloqueHandler.ResetBloque();
-            return;
-        }
-        Camera cam = Camera.main;
-        if (cam != null && Mouse.current != null)
-        {
-            Ray ray = cam.ScreenPointToRay(Mouse.current.position.ReadValue());
-            RaycastHit hit;
-            if (Physics.Raycast(ray, out hit, 100f))
-            {
-                GameObject bloqueGO = hit.collider.gameObject;
-                if (bloqueGO.CompareTag(tagBloque))
-                {
-                    bloqueHandler.PrepareBloque(bloqueGO);
-                    return;
-                }
-            }
-        }
-        bloqueHandler.ResetBloque();
-    }
-
-    public void OnArrastrarBloqueConClick(InputAction.CallbackContext context)
-    {
-        if (playerInput == null || !playerInput.enabled || bloqueHandler == null)
-        {
-            if (context.canceled) bloqueHandler?.EndDrag();
-            return;
-        }
-        if (!bloqueHandler.IsInInteractMode) return;
-
-        if (context.started) bloqueHandler.StartDrag();
-        else if (context.canceled) bloqueHandler.EndDrag();
     }
 
     public void OnActivateTaiyoken(InputAction.CallbackContext context)

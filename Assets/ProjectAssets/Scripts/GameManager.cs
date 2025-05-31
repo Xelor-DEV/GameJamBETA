@@ -1,7 +1,6 @@
 ﻿using UnityEngine;
 using UnityEngine.Events;
 using NaughtyAttributes;
-using UnityEditor.Animations;
 
 public class GameManager : MonoBehaviour
 {
