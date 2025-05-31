@@ -464,7 +464,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 79691a5bbf227014fb46a4e23aa88571, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  velocidadMovimiento: 5
+  maxSpeed: 5
+  rotationSpeed: 720
+  accelerationFactor: 15
+  decelerationFactor: 20
   plataformaTransform: {fileID: 199237851}
   puntoDeAgarreEnPlataforma: {fileID: 1042792403}
   tagTriggerAgarrePlataforma: PuntoDeAgarrePlataforma
@@ -1108,6 +1111,9 @@ MonoBehaviour:
     m_Bits: 1
   maxDragRaycastDistance: 100
   settleRaycastDistance: 2
+  mouseScrollSensitivity: 0.5
+  minZoomDistance: 1.5
+  maxZoomDistance: 20
 --- !u!1 &1018728952
 GameObject:
   m_ObjectHideFlags: 0
@@ -1262,6 +1268,9 @@ MonoBehaviour:
     m_Bits: 1
   maxDragRaycastDistance: 100
   settleRaycastDistance: 2
+  mouseScrollSensitivity: 0.5
+  minZoomDistance: 1.5
+  maxZoomDistance: 20
 --- !u!1 &1042792402
 GameObject:
   m_ObjectHideFlags: 0
@@ -1469,6 +1478,9 @@ MonoBehaviour:
     m_Bits: 1
   maxDragRaycastDistance: 100
   settleRaycastDistance: 2
+  mouseScrollSensitivity: 0.5
+  minZoomDistance: 1.5
+  maxZoomDistance: 20
 --- !u!1 &1400623287
 GameObject:
   m_ObjectHideFlags: 0
@@ -1748,6 +1760,9 @@ MonoBehaviour:
     m_Bits: 1
   maxDragRaycastDistance: 100
   settleRaycastDistance: 2
+  mouseScrollSensitivity: 0.5
+  minZoomDistance: 1.5
+  maxZoomDistance: 20
 --- !u!1 &1617822448
 GameObject:
   m_ObjectHideFlags: 0
@@ -1933,6 +1948,9 @@ MonoBehaviour:
     m_Bits: 1
   maxDragRaycastDistance: 100
   settleRaycastDistance: 2
+  mouseScrollSensitivity: 10
+  minZoomDistance: 1.5
+  maxZoomDistance: 20
 --- !u!1 &1746933387
 GameObject:
   m_ObjectHideFlags: 0
@@ -1989,6 +2007,7 @@ GameObject:
   - component: {fileID: 1780319213}
   - component: {fileID: 1780319212}
   - component: {fileID: 1780319215}
+  - component: {fileID: 1780319216}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -2038,7 +2057,7 @@ Camera:
   near clip plane: 0.3
   far clip plane: 1000
   field of view: 60
-  orthographic: 0
+  orthographic: 1
   orthographic size: 5
   m_Depth: -1
   m_CullingMask:
@@ -2063,13 +2082,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1780319211}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.099840686, y: 0, z: 0, w: 0.9950034}
-  m_LocalPosition: {x: 0, y: 4.69, z: -13.74}
+  m_LocalRotation: {x: 0.24684015, y: 0.29045945, z: -0.077828385, w: 0.9212198}
+  m_LocalPosition: {x: -11.91, y: 4.69, z: -5.41}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 11.46, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 30, y: 35, z: 0}
 --- !u!114 &1780319215
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2114,6 +2133,21 @@ MonoBehaviour:
     m_MipBias: 0
     m_VarianceClampScale: 0.9
     m_ContrastAdaptiveSharpening: 0
+--- !u!114 &1780319216
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1780319211}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a0a66c84dbc1df743812343e28ad1f93, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 344820760}
+  offset: {x: -7.07, y: 7.38, z: -10}
+  smoothSpeed: 0.125
 --- !u!1 &1824712485
 GameObject:
   m_ObjectHideFlags: 0
@@ -2268,6 +2302,9 @@ MonoBehaviour:
     m_Bits: 1
   maxDragRaycastDistance: 100
   settleRaycastDistance: 2
+  mouseScrollSensitivity: 0.5
+  minZoomDistance: 1.5
+  maxZoomDistance: 20
 --- !u!1 &2059845348
 GameObject:
   m_ObjectHideFlags: 0
@@ -2422,6 +2459,9 @@ MonoBehaviour:
     m_Bits: 1
   maxDragRaycastDistance: 100
   settleRaycastDistance: 2
+  mouseScrollSensitivity: 0.5
+  minZoomDistance: 1.5
+  maxZoomDistance: 20
 --- !u!1 &2086749404
 GameObject:
   m_ObjectHideFlags: 0
@@ -2607,6 +2647,9 @@ MonoBehaviour:
     m_Bits: 1
   maxDragRaycastDistance: 100
   settleRaycastDistance: 2
+  mouseScrollSensitivity: 0.5
+  minZoomDistance: 1.5
+  maxZoomDistance: 20
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
