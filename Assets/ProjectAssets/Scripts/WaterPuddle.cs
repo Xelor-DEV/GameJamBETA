@@ -10,22 +10,27 @@ public class WaterPuddle : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        if (other.CompareTag("Player"))
+        PlatformMovement platform = other.GetComponent<PlatformMovement>();
+        if (platform != null)
         {
             playerRigidbody = other.GetComponent<Rigidbody>();
             if (playerRigidbody != null)
             {
-                // Usamos la dirección del jugador (su forward) al entrar
-                slideDirection = other.transform.forward;
-                slideDirection.y = 0; // Mantenemos el movimiento horizontal
+                // Usamos la velocidad actual del jugador para determinar la dirección
+                Vector3 horizontalVelocity = playerRigidbody.linearVelocity;
+                horizontalVelocity.y = 0; // Ignoramos el componente vertical
 
-                if (slideDirection != Vector3.zero)
+                // Comprobamos si hay movimiento horizontal significativo
+                if (horizontalVelocity.sqrMagnitude > 0.1f)
                 {
-                    slideDirection.Normalize();
+                    slideDirection = horizontalVelocity.normalized;
+                    slideEndTime = Time.time + duration;
                 }
-
-                // Configuramos la duración del deslizamiento
-                slideEndTime = Time.time + duration;
+                else
+                {
+                    // Si no hay movimiento, desactivamos el efecto
+                    playerRigidbody = null;
+                }
             }
         }
     }
@@ -34,16 +39,15 @@ public class WaterPuddle : MonoBehaviour
     {
         if (playerRigidbody != null && Time.time < slideEndTime)
         {
-            // Aplicamos fuerza en la dirección de entrada del jugador
             playerRigidbody.AddForce(slideDirection * pushForce, ForceMode.Acceleration);
         }
     }
 
     private void OnTriggerExit(Collider other)
     {
-        if (other.CompareTag("Player"))
+        PlatformMovement platform = other.GetComponent<PlatformMovement>();
+        if (platform != null)
         {
-            // Reseteamos cuando el jugador sale del trigger
             playerRigidbody = null;
         }
     }

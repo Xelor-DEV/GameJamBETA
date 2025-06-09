@@ -14,6 +14,9 @@ public class UI_MovingInventory : MonoBehaviour
     [SerializeField] private InventoryItem[] inventoryItems;
     [SerializeField] private Transform spawnPoint;
 
+    [Header("Win Reference")]
+    public Win winScript;
+
     [Header("Animation Settings")]
     [SerializeField] private float moveDuration = 0.5f;
     [SerializeField] private float appearDelay = 0.5f;
@@ -84,13 +87,24 @@ public class UI_MovingInventory : MonoBehaviour
         {
             StartCoroutine(AnimateWindow(inventoryWindow.position, hidePosition.position, moveDuration, true, false));
 
-            // Habilitar el movimiento del personaje y activar detección
-            ControladorPersonajeIndependiente playerController = Object.FindFirstObjectByType<ControladorPersonajeIndependiente>();
-            if (playerController != null)
+            // Habilitar movimiento del jugador
+            PlayerMovement playerMovement = Object.FindFirstObjectByType<PlayerMovement>();
+            if (playerMovement != null)
             {
-                playerController.HabilitarMovimiento();
-                playerController.ToggleBlockDetection(true);
+                playerMovement.EnableMovement(true);
             }
+
+            // INICIAR EL JUEGO Y EL CRONÓMETRO
+            if (winScript != null)
+            {
+                winScript.IniciarJuego();
+            }
+        }
+
+        DraggableItem[] draggableItems = Object.FindObjectsByType<DraggableItem>(FindObjectsSortMode.None);
+        foreach (var item in draggableItems)
+        {
+            item.SetGameStarted(true);
         }
     }
 

@@ -7,26 +7,34 @@ public class PlayerCarryController : MonoBehaviour
     [SerializeField] private float detectionRadius = 1.5f;
     [SerializeField] private LayerMask platformLayer;
     [SerializeField] private Transform carryPoint;
-    [SerializeField] private float positionLerpSpeed = 15f;
-    
+
+    [Header("Animations")]
+    [SerializeField] private Animator animator;
+
     private PlayerMovement playerMovement;
     private PlatformMovement nearbyPlatform;
     private bool isCarrying = false;
+    private Rigidbody playerRigidbody;
+    private bool wasCarrying = false;
+    private BlockDragController blockDragController;
 
     private void Awake()
     {
         playerMovement = GetComponent<PlayerMovement>();
+        playerRigidbody = GetComponent<Rigidbody>();
+        blockDragController = GetComponent<BlockDragController>();
     }
 
     private void Update()
     {
-        if (!isCarrying) 
+        UpdateCarryAnimation();
+
+        if (!isCarrying)
         {
             DetectNearbyPlatforms();
         }
         else
         {
-            // Movimiento suave hacia el punto de acarreo
             transform.position = carryPoint.position;
         }
     }
@@ -34,13 +42,13 @@ public class PlayerCarryController : MonoBehaviour
     private void DetectNearbyPlatforms()
     {
         Collider[] hitColliders = Physics.OverlapSphere(
-            transform.position, 
-            detectionRadius, 
+            transform.position,
+            detectionRadius,
             platformLayer
         );
-        
+
         nearbyPlatform = null;
-        
+
         foreach (var collider in hitColliders)
         {
             PlatformMovement platform = collider.GetComponent<PlatformMovement>();
@@ -52,37 +60,52 @@ public class PlayerCarryController : MonoBehaviour
         }
     }
 
-public void TryAttach()
-{
-    if (isCarrying || nearbyPlatform == null) return;
-    
-    isCarrying = true;
-    
-    // Añade esto: Sincronizar rotación inicial con la plataforma
-    transform.rotation = nearbyPlatform.transform.rotation;
-    
-    // Configurar posición inicial
-    transform.position = carryPoint.position;
-    
-    // Configurar controles
-    playerMovement.SetMovementEnabled(false);
-    playerMovement.SetRotationEnabled(true);
-    nearbyPlatform.SetActive(true);
-    ChangeControlManager.Instance.SetCurrentPlatform(nearbyPlatform);
-}
+    public void TryAttach()
+    {
+        if (isCarrying || nearbyPlatform == null) return;
+
+        isCarrying = true;
+        animator.SetTrigger("Pickup");
+
+        // Configurar física
+        playerRigidbody.isKinematic = true;
+
+        // Configurar controles
+        playerMovement.SetMovementEnabled(false);
+        playerMovement.SetRotationEnabled(false); // Desactivar rotación automática
+        nearbyPlatform.SetActive(true);
+        ChangeControlManager.Instance.SetCurrentPlatform(nearbyPlatform);
+        blockDragController.SetActive(false);
+    }
+
+    private void UpdateCarryAnimation()
+    {
+        if (isCarrying != wasCarrying)
+        {
+            animator.SetBool("isCarrying", isCarrying);
+            wasCarrying = isCarrying;
+        }
+    }
 
     public void Detach()
     {
         if (!isCarrying) return;
-        
+
         isCarrying = false;
-        
+        animator.SetTrigger("Drop");
+
+        // Restaurar física
+        playerRigidbody.isKinematic = false;
+
         // Restaurar controles
         playerMovement.SetMovementEnabled(true);
+        playerMovement.SetRotationEnabled(true);
         nearbyPlatform.SetActive(false);
         ChangeControlManager.Instance.ClearCurrentPlatform();
-        
+
         nearbyPlatform = null;
+        blockDragController.SetActive(true);
+
     }
 
     public bool IsNearPlatform() => nearbyPlatform != null;

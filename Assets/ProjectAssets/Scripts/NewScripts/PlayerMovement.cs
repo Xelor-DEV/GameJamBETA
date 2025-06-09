@@ -16,6 +16,12 @@ public class PlayerMovement : MonoBehaviour
     [Header("Camera Reference")]
     [SerializeField] private Transform cameraTransform;
 
+    [Header("Animations")]
+    [SerializeField] private Animator animator;
+
+    [Header("Game State")]
+    [SerializeField] private bool movementEnabled = false;
+
     private Rigidbody rb;
     private Vector2 moveInput;
     private float currentSpeed;
@@ -23,6 +29,7 @@ public class PlayerMovement : MonoBehaviour
     private bool canMove = true;
     private bool canRotate = true;
     private PlayerCarryController carryController;
+    private bool wasMoving = false;
 
     private void Awake()
     {
@@ -38,17 +45,38 @@ public class PlayerMovement : MonoBehaviour
 
     private void Update()
     {
+        if (!movementEnabled) return; // No hacer nada si el movimiento está deshabilitado
+
         CheckGrounded();
+        UpdateAnimations();
+    }
+
+    private void UpdateAnimations()
+    {
+        bool isMoving = currentSpeed > 0.1f;
+        if (isMoving != wasMoving)
+        {
+            animator.SetBool("isMoving", isMoving);
+            wasMoving = isMoving;
+        }
+    }
+
+    public void EnableMovement(bool enable)
+    {
+        movementEnabled = enable;
+        SetMovementEnabled(enable);
     }
 
     private void FixedUpdate()
     {
+        if (!movementEnabled) return;
+
         if (canMove)
         {
             ApplyMovement();
         }
-        
-        if (canRotate)
+
+        if (canRotate && !carryController.IsCarrying)
         {
             ApplyRotation();
         }
@@ -62,9 +90,9 @@ public class PlayerMovement : MonoBehaviour
     private void CheckGrounded()
     {
         isGrounded = Physics.Raycast(
-            transform.position + Vector3.up * 0.1f, 
-            Vector3.down, 
-            groundCheckDistance + 0.1f, 
+            transform.position + Vector3.up * 0.1f,
+            Vector3.down,
+            groundCheckDistance + 0.1f,
             groundLayer
         );
     }
@@ -73,12 +101,12 @@ public class PlayerMovement : MonoBehaviour
     {
         Vector3 cameraForward = cameraTransform.forward;
         Vector3 cameraRight = cameraTransform.right;
-        
+
         cameraForward.y = 0;
         cameraRight.y = 0;
         cameraForward.Normalize();
         cameraRight.Normalize();
-        
+
         return (cameraForward * moveInput.y + cameraRight * moveInput.x);
     }
 
@@ -112,35 +140,62 @@ public class PlayerMovement : MonoBehaviour
         }
     }
 
-private void ApplyRotation()
-{
-    if (moveInput == Vector2.zero) return;
-
-    Vector3 moveDirection = GetCameraRelativeDirection();
-
-    // Añade esta parte: Convertir dirección al espacio de la plataforma si está acarreando
-    if (carryController != null && carryController.IsCarrying)
+    private void ApplyRotation()
     {
-        PlatformMovement platform = ChangeControlManager.Instance.CurrentPlatform;
-        if (platform != null)
+        if (moveInput == Vector2.zero) return;
+
+        Vector3 moveDirection = GetCameraRelativeDirection();
+
+        if (moveDirection != Vector3.zero)
         {
-            // Convertir de dirección mundial a local (respecto a la plataforma)
-            moveDirection = platform.transform.InverseTransformDirection(moveDirection);
-            // Mantener solo la componente horizontal
-            moveDirection.y = 0;
+            RotateTowardsDirection(moveDirection);
         }
     }
 
-    if (moveDirection != Vector3.zero)
+    // Método público para rotación controlada externamente
+    public void RotateTowardsDirection(Vector3 direction)
     {
-        Quaternion targetRotation = Quaternion.LookRotation(moveDirection);
+        if (direction == Vector3.zero) return;
+
+        Quaternion targetRotation = Quaternion.LookRotation(direction);
         rb.rotation = Quaternion.RotateTowards(
-            rb.rotation, 
-            targetRotation, 
+            rb.rotation,
+            targetRotation,
             rotationSpeed * Time.fixedDeltaTime
         );
     }
-}
+
+    public void ApplyFixedRotation(Vector2 input)
+    {
+        // Calcular ángulo en grados basado en la dirección
+        float angle = Mathf.Atan2(input.y, input.x) * Mathf.Rad2Deg;
+
+        // Convertir a sistema de 360 grados
+        if (angle < 0) angle += 360;
+
+        // Mapear a las direcciones específicas
+        float targetAngle = 0f;
+
+        if (angle >= 315 || angle < 45)    // Derecha
+            targetAngle = -135f;
+        else if (angle >= 45 && angle < 135)   // Arriba
+            targetAngle = 135f;
+        else if (angle >= 135 && angle < 225)  // Izquierda
+            targetAngle = 45f;
+        else if (angle >= 225 && angle < 315)  // Abajo
+            targetAngle = -45f;
+
+        // Calcular rotación objetivo
+        Quaternion targetRotation = Quaternion.Euler(0, targetAngle, 0);
+
+        // Interpolar suavemente hacia la rotación objetivo
+        transform.rotation = Quaternion.RotateTowards(
+            transform.rotation,
+            targetRotation,
+            rotationSpeed * Time.deltaTime
+        );
+    }
+
     public void SetMovementEnabled(bool enabled)
     {
         canMove = enabled;
@@ -150,7 +205,7 @@ private void ApplyRotation()
             rb.linearVelocity = new Vector3(0, rb.linearVelocity.y, 0);
         }
     }
-    
+
     public void SetRotationEnabled(bool enabled)
     {
         canRotate = enabled;

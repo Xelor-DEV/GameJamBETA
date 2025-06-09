@@ -49,7 +49,7 @@ public class UI_MainMenu : MonoBehaviour
         InitializeButtons();
         InitializeWindows();
         InitializeProtector();
-        MoveSelector(currentSelectedIndex);
+        MoveSelector(0);
     }
 
     private void InitializeProtector()

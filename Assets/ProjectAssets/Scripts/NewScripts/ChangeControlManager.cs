@@ -5,18 +5,16 @@ using UnityEngine.InputSystem;
 public class ChangeControlManager : MonoBehaviour
 {
     public static ChangeControlManager Instance { get; private set; }
-    
+
     [SerializeField] private PlayerMovement playerMovement;
     [SerializeField] private PlayerCarryController carryController;
     [SerializeField] private PlatformMovement currentPlatform;
-    
-    public PlatformMovement CurrentPlatform
-    {
-        get
-        {
-            return currentPlatform;
-        }
-    }
+
+    private Vector2 currentInput;
+    private bool isCarryingLastFrame;
+    [SerializeField] private BlockDragController blockDragController;
+
+    public PlatformMovement CurrentPlatform => currentPlatform;
 
     private void Awake()
     {
@@ -31,25 +29,37 @@ public class ChangeControlManager : MonoBehaviour
 
     public void OnMove(InputAction.CallbackContext context)
     {
-        Vector2 input = context.ReadValue<Vector2>();
-        
-        // Actualizar siempre el input del jugador para la rotación
+        currentInput = context.ReadValue<Vector2>();
         playerMovement.OnMove(context);
-        
+
         if (carryController.IsCarrying && currentPlatform != null)
         {
-            // Obtener dirección relativa a la cámara
             Vector3 moveDirection = playerMovement.GetCameraRelativeDirection();
-            
-            // Mover plataforma en esa dirección
             currentPlatform.Move(moveDirection);
         }
+    }
+
+    private void Update()
+    {
+        // Aplicar rotación solo cuando cambia el input
+        if (carryController.IsCarrying && currentPlatform != null && currentInput != Vector2.zero)
+        {
+            playerMovement.ApplyFixedRotation(currentInput);
+        }
+
+        // Forzar rotación al iniciar acople
+        if (carryController.IsCarrying && !isCarryingLastFrame)
+        {
+            playerMovement.ApplyFixedRotation(currentInput);
+        }
+
+        isCarryingLastFrame = carryController.IsCarrying;
     }
 
     public void OnInteract(InputAction.CallbackContext context)
     {
         if (!context.performed) return;
-        
+
         if (carryController.IsCarrying)
         {
             carryController.Detach();
@@ -63,10 +73,12 @@ public class ChangeControlManager : MonoBehaviour
     public void SetCurrentPlatform(PlatformMovement platform)
     {
         currentPlatform = platform;
+        blockDragController.SetActive(false);
     }
 
     public void ClearCurrentPlatform()
     {
         currentPlatform = null;
+        blockDragController.SetActive(true);
     }
 }

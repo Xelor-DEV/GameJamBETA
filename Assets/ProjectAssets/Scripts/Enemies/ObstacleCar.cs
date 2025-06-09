@@ -51,7 +51,7 @@ public class ObstacleCar : MonoBehaviour
         {
             case State.MovingToEnd:
                 Seek(currentTarget);
-                OrientTowards(rb.linearVelocity);
+                //OrientTowards(rb.linearVelocity);
 
                 // Check if arrived at end point
                 if (Vector3.Distance(transform.position, endPoint.position) <= arrivalThreshold)

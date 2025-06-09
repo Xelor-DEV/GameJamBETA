@@ -10,7 +10,7 @@ public class PlatformMovement : MonoBehaviour
     [SerializeField] private float acceleration = 15f;
     [SerializeField] private float deceleration = 20f;
     [SerializeField] private float drag = 5f;
-    
+
     private Rigidbody rb;
     private Vector3 moveDirection;
     private float currentSpeed;
@@ -20,7 +20,6 @@ public class PlatformMovement : MonoBehaviour
     {
         rb = GetComponent<Rigidbody>();
         rb.linearDamping = drag;
-        rb.constraints = RigidbodyConstraints.FreezeRotation;
         SetActive(false);
     }
 
@@ -28,32 +27,20 @@ public class PlatformMovement : MonoBehaviour
     {
         if (!isActive) return;
         moveDirection = direction.normalized;
-        
-        // Calcular velocidad actual
-        if (moveDirection != Vector3.zero)
-        {
-            currentSpeed = Mathf.MoveTowards(currentSpeed, maxVelocity, acceleration * Time.fixedDeltaTime);
-        }
-        else
-        {
-            currentSpeed = Mathf.MoveTowards(currentSpeed, 0, deceleration * Time.fixedDeltaTime);
-        }
     }
 
     private void FixedUpdate()
     {
         if (!isActive) return;
 
-        if (moveDirection != Vector3.zero && currentSpeed > 0)
+        if (moveDirection != Vector3.zero)
         {
-            // Aplicar fuerza en la dirección calculada
-            Vector3 targetVelocity = moveDirection * currentSpeed;
+            Vector3 targetVelocity = moveDirection * maxVelocity;
             Vector3 force = (targetVelocity - rb.linearVelocity) * moveForce;
             force.y = 0;
-            
+
             rb.AddForce(force, ForceMode.Force);
-            
-            // Limitar velocidad
+
             Vector3 horizontalVel = new Vector3(rb.linearVelocity.x, 0, rb.linearVelocity.z);
             if (horizontalVel.magnitude > maxVelocity)
             {
@@ -61,20 +48,20 @@ public class PlatformMovement : MonoBehaviour
                 rb.linearVelocity = new Vector3(horizontalVel.x, rb.linearVelocity.y, horizontalVel.z);
             }
         }
-        else if (currentSpeed <= 0)
+        else
         {
-            // Frenar cuando no hay input
             Vector3 horizontalVel = new Vector3(rb.linearVelocity.x, 0, rb.linearVelocity.z);
-            Vector3 brakeForce = -horizontalVel * deceleration * 0.1f;
+            Vector3 brakeForce = -horizontalVel * deceleration;
             rb.AddForce(brakeForce, ForceMode.Force);
         }
     }
+
 
     public void SetActive(bool active)
     {
         isActive = active;
         rb.isKinematic = !active;
-        
+
         if (!active)
         {
             moveDirection = Vector3.zero;

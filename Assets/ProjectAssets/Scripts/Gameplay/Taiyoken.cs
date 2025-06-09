@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections;
+using TMPro;
 
 public class Taiyoken : MonoBehaviour
 {
@@ -10,19 +11,28 @@ public class Taiyoken : MonoBehaviour
     public float visualEffectDuration = 1.5f;
     public float cooldown = 10f;
     public float visualEffectYPosition = -4.94f;
+    public TMP_Text cooldownText;
+    public int maxCharges = 2; // Máximo de usos
 
-    private bool canUseAbility = true;
+    private int currentCharges; // Usos actuales
+    private float remainingCooldown;
+    private bool isCooldownActive;
+
+    void Start()
+    {
+        currentCharges = maxCharges; // Inicializar con todos los usos disponibles
+        UpdateChargeText();
+    }
 
     public void ActivateTaiyoken()
     {
-        if (!canUseAbility)
-        {
-            Debug.Log("Taiyoken en enfriamiento.");
-            return;
-        }
+        // Solo activar si hay cargas y no está en cooldown
+        if (currentCharges <= 0 || isCooldownActive) return;
 
         Debug.Log("¡TAIYOKEN activado por el personaje!");
+        currentCharges--;
 
+        // Visual effect
         if (taiyokenVisualEffect != null)
         {
             Vector3 effectPosition = new Vector3(transform.position.x, visualEffectYPosition, transform.position.z);
@@ -30,32 +40,72 @@ public class Taiyoken : MonoBehaviour
             Destroy(effectInstance, visualEffectDuration);
         }
 
+        // Aplicar stun a enemigos
         Collider[] hitColliders = Physics.OverlapSphere(transform.position, effectRange);
         foreach (var hitCollider in hitColliders)
         {
             if (hitCollider.CompareTag(enemyTag))
             {
-                Enemy enemyScript = hitCollider.GetComponent<Enemy>();
-                if (enemyScript != null)
+                EnemyController enemyController = hitCollider.GetComponent<EnemyController>();
+                if (enemyController != null)
                 {
-                    enemyScript.Stun(stunDuration);
+                    enemyController.StartStun(stunDuration);
                 }
                 else
                 {
-                    Debug.LogWarning($"El objeto {hitCollider.name} con tag '{enemyTag}' no tiene el script 'Enemy'.");
+                    Debug.LogWarning($"Objeto {hitCollider.name} no tiene EnemyController");
                 }
             }
         }
-        StartCoroutine(CooldownCoroutine());
+
+        // Iniciar cooldown solo si quedan cargas disponibles
+        if (currentCharges > 0)
+        {
+            StartCoroutine(CooldownCoroutine());
+        }
+
+        UpdateChargeText();
     }
 
     IEnumerator CooldownCoroutine()
     {
-        canUseAbility = false;
-        Debug.Log($"Taiyoken en enfriamiento por {cooldown} segundos.");
-        yield return new WaitForSeconds(cooldown);
-        canUseAbility = true;
-        Debug.Log("Taiyoken listo para usarse.");
+        isCooldownActive = true;
+        remainingCooldown = cooldown;
+
+        // Mostrar cooldown
+        while (remainingCooldown > 0)
+        {
+            if (cooldownText != null)
+            {
+                cooldownText.text = $"Flash Cooldown: {Mathf.CeilToInt(remainingCooldown)} s";
+            }
+            remainingCooldown -= Time.deltaTime;
+            yield return null;
+        }
+
+        // Finalizar cooldown (sin recargar cargas)
+        isCooldownActive = false;
+        UpdateChargeText();
+    }
+
+    void UpdateChargeText()
+    {
+        if (cooldownText == null) return;
+
+        if (isCooldownActive && currentCharges > 0)
+        {
+            // Durante cooldown se muestra el tiempo (ya actualizado en la corrutina)
+        }
+        else
+        {
+            // Mostrar cargas disponibles
+            cooldownText.text = $"Flash Charges: {currentCharges}/{maxCharges}";
+        }
+    }
+
+    void OnDestroy()
+    {
+        StopAllCoroutines();
     }
 
     void OnDrawGizmosSelected()
