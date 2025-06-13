@@ -149,3 +149,22 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0424f22f2dec9494fad6962b043e30a8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  canBeDragged: 1
+  gameStarted: 0
+  inventoryManager: {fileID: 0}
+  isBeingDragged: 0
+  currentHeight: 0
+  heightAdjustmentSpeed: 5
+  minHeight: 0.5
+  maxHeight: 22
+  offset: {x: 0, y: 0, z: 0}
+  originalLayer: 0
+  ignoreRaycastLayer: 2
+  isOnGround: 0
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 64
+  boxSize: {x: 1.2, y: 1.2, z: 1.2}
+  boxOffset: {x: 0, y: 0, z: 0}
+  gizmoColorGround: {r: 1, g: 0.019995881, b: 0, a: 1}
+  gizmoColorAir: {r: 0.0025007725, g: 1, b: 0, a: 0.27058825}

@@ -1,4 +1,3 @@
-// BlockDragController.cs
 using UnityEngine;
 
 public class BlockDragController : MonoBehaviour
@@ -28,12 +27,11 @@ public class BlockDragController : MonoBehaviour
             blockLayer
         );
 
-        bool blockDetected = false;
         foreach (var collider in hitColliders)
         {
-            if (collider.CompareTag("Suelo"))
+            // Cambiado a nuevo tag para bloques arrastrables
+            if (collider.CompareTag("DraggableBlock"))
             {
-                blockDetected = true;
                 DraggableItem draggable = collider.GetComponent<DraggableItem>();
                 if (draggable != null)
                 {

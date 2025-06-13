@@ -14,23 +14,37 @@ public class Taiyoken : MonoBehaviour
     public TMP_Text cooldownText;
     public int maxCharges = 2; // Máximo de usos
 
+    [Header("Sound")]
+    [SerializeField] private int flashSoundIndex;
+
     private int currentCharges; // Usos actuales
     private float remainingCooldown;
     private bool isCooldownActive;
+    private bool gameStarted = false;
 
     void Start()
     {
         currentCharges = maxCharges; // Inicializar con todos los usos disponibles
-        UpdateChargeText();
+        ClearCooldownText();
+    }
+
+    public void SetGameStarted(bool started)
+    {
+        gameStarted = started;
+        UpdateChargeText(); // Actualizar UI cuando cambia el estado
     }
 
     public void ActivateTaiyoken()
     {
+        if (!gameStarted) return;
+
         // Solo activar si hay cargas y no está en cooldown
         if (currentCharges <= 0 || isCooldownActive) return;
 
         Debug.Log("¡TAIYOKEN activado por el personaje!");
         currentCharges--;
+
+        AudioManager.Instance.PlaySfx(flashSoundIndex);
 
         // Visual effect
         if (taiyokenVisualEffect != null)
@@ -73,7 +87,7 @@ public class Taiyoken : MonoBehaviour
         remainingCooldown = cooldown;
 
         // Mostrar cooldown
-        while (remainingCooldown > 0)
+        while (remainingCooldown > 0 && gameStarted)
         {
             if (cooldownText != null)
             {
@@ -91,6 +105,12 @@ public class Taiyoken : MonoBehaviour
     void UpdateChargeText()
     {
         if (cooldownText == null) return;
+        
+        if (!gameStarted)
+        {
+            ClearCooldownText();
+            return;
+        }
 
         if (isCooldownActive && currentCharges > 0)
         {
@@ -100,6 +120,14 @@ public class Taiyoken : MonoBehaviour
         {
             // Mostrar cargas disponibles
             cooldownText.text = $"Flash Charges: {currentCharges}/{maxCharges}";
+        }
+    }
+
+    private void ClearCooldownText()
+    {
+        if (cooldownText != null)
+        {
+            cooldownText.text = "";
         }
     }
 

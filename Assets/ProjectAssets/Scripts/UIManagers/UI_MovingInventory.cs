@@ -13,6 +13,7 @@ public class UI_MovingInventory : MonoBehaviour
     [SerializeField] private Image protector;
     [SerializeField] private InventoryItem[] inventoryItems;
     [SerializeField] private Transform spawnPoint;
+    [SerializeField] private Taiyoken flash;
 
     [Header("Win Reference")]
     public Win winScript;
@@ -98,6 +99,11 @@ public class UI_MovingInventory : MonoBehaviour
             if (winScript != null)
             {
                 winScript.IniciarJuego();
+            }
+
+            if (flash != null)
+            {
+                flash.SetGameStarted(true);
             }
         }
 

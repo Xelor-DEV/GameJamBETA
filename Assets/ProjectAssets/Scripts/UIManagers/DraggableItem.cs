@@ -11,20 +11,27 @@ public class DraggableItem : MonoBehaviour
     private Collider objCollider;
     [SerializeField] private UI_MovingInventory inventoryManager;
     [SerializeField] private bool isBeingDragged = false;
-    [SerializeField]private float currentHeight;
-    [SerializeField]private float heightAdjustmentSpeed = 5f;
-    [SerializeField]private float minHeight = 0.5f;
-    [SerializeField]private float maxHeight = 22; // Altura máxima aumentada a 13
-    [SerializeField]private Vector3 offset;
-    [SerializeField]private int originalLayer;
-    [SerializeField]private int ignoreRaycastLayer = 2; // Layer "Ignore Raycast"
+    [SerializeField] private float currentHeight;
+    [SerializeField] private float heightAdjustmentSpeed = 5f;
+    [SerializeField] private float minHeight = 0.5f;
+    [SerializeField] private float maxHeight = 22;
+    [SerializeField] private Vector3 offset;
+    [SerializeField] private int originalLayer;
+    [SerializeField] private int ignoreRaycastLayer = 2;
     [SerializeField] private bool isOnGround = false;
-    private int groundCollisionCount = 0;
+
+    [Header("Ground Detection")]
+    [SerializeField] private LayerMask groundLayer;
+    [SerializeField] private Vector3 boxSize = new Vector3(0.5f, 0.1f, 0.5f);
+    [SerializeField] private Vector3 boxOffset = Vector3.zero;
+    [SerializeField] private Color gizmoColorGround = Color.green;
+    [SerializeField] private Color gizmoColorAir = Color.red;
 
     public void SetInventoryManager(UI_MovingInventory manager)
     {
         inventoryManager = manager;
     }
+
     public bool IsOnGround()
     {
         return isOnGround;
@@ -45,11 +52,11 @@ public class DraggableItem : MonoBehaviour
         rb = GetComponent<Rigidbody>();
         objCollider = GetComponent<Collider>();
         currentHeight = transform.position.y;
-
-        // Guardar la capa original
         originalLayer = gameObject.layer;
 
-        // Configurar inicialmente
+        // Asegurar que el objeto tenga el tag correcto para arrastre
+        gameObject.tag = "DraggableBlock";
+
         if (objCollider != null && rb != null && !isBeingDragged)
         {
             objCollider.isTrigger = true;
@@ -59,18 +66,56 @@ public class DraggableItem : MonoBehaviour
         carryController = Object.FindFirstObjectByType<PlayerCarryController>();
     }
 
+    void Update()
+    {
+        // Solo verificar suelo cuando no se está arrastrando
+        if (!isBeingDragged)
+        {
+            CheckGroundStatus();
+        }
+    }
+
+    private void CheckGroundStatus()
+    {
+        // Calcular posición de la caja
+        Vector3 boxCenter = transform.position + boxOffset;
+
+        // Realizar OverlapBox para detectar suelo
+        Collider[] hitColliders = Physics.OverlapBox(
+            boxCenter,
+            boxSize / 2,
+            transform.rotation,
+            groundLayer
+        );
+
+        // Resetear estado inicial
+        isOnGround = false;
+
+        // Verificar cada collider detectado
+        foreach (var collider in hitColliders)
+        {
+            // Ignorarse a sí mismo
+            if (collider.gameObject == gameObject) continue;
+
+            // Si detecta suelo, actualizar estado y salir
+            if (collider.CompareTag("Ground"))
+            {
+                isOnGround = true;
+                break;
+            }
+        }
+    }
 
     void OnMouseDown()
     {
-        // Comportamiento antes del Ready (arrastre libre)
         if (!gameStarted)
         {
             StartDragging();
             return;
         }
 
-        // Comportamiento después del Ready (arrastre restringido)
-        if (gameObject.tag != "Suelo") return;
+        // Cambiado a nuevo tag para bloques arrastrables
+        if (gameObject.tag != "DraggableBlock") return;
         if (carryController != null && carryController.IsCarrying) return;
         if (!canBeDragged) return;
 
@@ -81,41 +126,32 @@ public class DraggableItem : MonoBehaviour
     {
         if (rb == null || objCollider == null) return;
 
-        // Cambiar a capa que ignora raycast
         gameObject.layer = ignoreRaycastLayer;
-
         isBeingDragged = true;
         rb.isKinematic = true;
         objCollider.isTrigger = true;
         currentHeight = transform.position.y;
+        isOnGround = false; // Al arrastrar, no está en suelo
 
-        // Calcular offset
         Vector3 mouseWorldPos = GetMouseWorldPosition();
         offset = transform.position - mouseWorldPos;
         offset.y = 0;
 
-        // Ocultar inventario
         if (inventoryManager != null)
         {
             inventoryManager.HideWindow();
         }
     }
 
-
-
     void OnMouseDrag()
     {
         if (!isBeingDragged) return;
 
-        // Obtener posición del mouse
         Vector3 mouseWorldPos = GetMouseWorldPosition();
         Vector3 newPosition = mouseWorldPos + offset;
         newPosition.y = currentHeight;
-
-        // Mover objeto
         transform.position = newPosition;
 
-        // Ajustar altura con la rueda del mouse
         float scroll = Input.GetAxis("Mouse ScrollWheel");
         if (scroll != 0)
         {
@@ -134,25 +170,19 @@ public class DraggableItem : MonoBehaviour
         if (!isBeingDragged) return;
 
         isBeingDragged = false;
+        gameObject.layer = originalLayer;
 
-        // Restaurar propiedades físicas
         if (objCollider != null) objCollider.isTrigger = false;
         if (rb != null) rb.isKinematic = false;
 
-        // Restaurar capa original
-        gameObject.layer = originalLayer;
-
-        // Mostrar inventario solo en fase de preparación
         if (!gameStarted && inventoryManager != null)
         {
             inventoryManager.ShowWindow();
         }
     }
 
-
     private Vector3 GetMouseWorldPosition()
     {
-        // Usar Raycast para obtener posición precisa
         Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
         Plane plane = new Plane(Vector3.up, new Vector3(0, currentHeight, 0));
 
@@ -161,55 +191,24 @@ public class DraggableItem : MonoBehaviour
             return ray.GetPoint(distance);
         }
 
-        // Fallback
         Vector3 mousePoint = Input.mousePosition;
         mousePoint.z = Camera.main.WorldToScreenPoint(transform.position).z;
         return Camera.main.ScreenToWorldPoint(mousePoint);
     }
 
-    void OnCollisionEnter(Collision collision)
-    {
-        if (collision.gameObject.CompareTag("Suelo"))
-        {
-            gameObject.tag = "Suelo";
-            groundCollisionCount++;
-            UpdateGroundStatus();
-        }
-    }
-
-    void OnCollisionExit(Collision collision)
-    {
-        if (collision.gameObject.CompareTag("Suelo"))
-        {
-            groundCollisionCount = Mathf.Max(0, groundCollisionCount - 1);
-            UpdateGroundStatus();
-        }
-    }
-    void OnTriggerEnter(Collider other)
-    {
-        if (other.CompareTag("Suelo"))
-        {
-            groundCollisionCount++;
-            UpdateGroundStatus();
-        }
-    }
-
     void OnTriggerExit(Collider other)
     {
-        if (other.CompareTag("Suelo"))
-        {
-            groundCollisionCount = Mathf.Max(0, groundCollisionCount - 1);
-            UpdateGroundStatus();
-        }
-
-        // Código existente para jugador
         if (gameStarted && other.CompareTag("Player") && isBeingDragged)
         {
             SetCanBeDragged(false);
         }
     }
-    private void UpdateGroundStatus()
+
+    // Debug: Visualizar el área de detección
+    void OnDrawGizmos()
     {
-        isOnGround = groundCollisionCount > 0;
+        Gizmos.color = isOnGround ? gizmoColorGround : gizmoColorAir;
+        Gizmos.matrix = Matrix4x4.TRS(transform.position + boxOffset, transform.rotation, Vector3.one);
+        Gizmos.DrawWireCube(Vector3.zero, boxSize);
     }
 }

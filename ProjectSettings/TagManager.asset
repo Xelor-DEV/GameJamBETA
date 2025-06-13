@@ -11,6 +11,8 @@ TagManager:
   - Suelo
   - Plataforma
   - Win
+  - Ground
+  - DraggableBlock
   layers:
   - Default
   - TransparentFX

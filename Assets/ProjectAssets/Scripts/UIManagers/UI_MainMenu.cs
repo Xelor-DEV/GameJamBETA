@@ -36,6 +36,9 @@ public class UI_MainMenu : MonoBehaviour
     [Required][SerializeField] private RectTransform hidePosition;
     [Required][SerializeField] private RectTransform showPosition;
 
+    [Header("Sound")]
+    [SerializeField] private int changeSelectionSoundId = 0;
+
     private int currentSelectedIndex = 0;
     private float selectorXPosition;
 
@@ -115,6 +118,10 @@ public class UI_MainMenu : MonoBehaviour
         if (isWindowActive) return;
 
         if (selector == null || index < 0 || index >= menuButtons.Length) return;
+        
+        if (index == currentSelectedIndex) return;
+
+        AudioManager.Instance.PlaySfx(changeSelectionSoundId);
 
         if (currentSelectedIndex >= 0 && currentSelectedIndex < menuButtons.Length)
         {
